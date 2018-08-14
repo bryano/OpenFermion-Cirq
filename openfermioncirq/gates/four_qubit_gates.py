@@ -143,4 +143,4 @@ class LocalPQRSGate(cirq.EigenGate,
         return 'PQRS**{!r}'.format(self.half_turns)
 
 
-LocalPQRSGate = LocalPQRSGate()
+PQRS = LocalPQRSGate()
