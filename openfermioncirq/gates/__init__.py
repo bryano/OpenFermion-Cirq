@@ -29,3 +29,6 @@ from openfermioncirq.gates.three_qubit_gates import (
     ControlledXXYYGate,
     ControlledYXXYGate,
     Rot111Gate)
+
+from openfermioncirq.gates.four_qubit_gates import (
+    LocalPQRSGate)

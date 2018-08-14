@@ -39,9 +39,9 @@ class LocalPQRSGate(cirq.EigenGate,
             exponent = 2 * duration / numpy.pi
         else:
             exponent = cirq.value.chosen_angle_to_half_turns(
-                    half_turns=half_turns,
-                    rads=rads,
-                    degs=degs)
+                half_turns=half_turns,
+                rads=rads,
+                degs=degs)
 
         super().__init__(exponent=exponent)
 
