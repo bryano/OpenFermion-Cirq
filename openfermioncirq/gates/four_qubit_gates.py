@@ -89,63 +89,33 @@ class LocalPQRSGate(cirq.EigenGate,
     def default_decompose(self, qubits):
         p, q, r, s = qubits
 
+        rq_phase_block = [cirq.Z(q) ** 0.125,
+                          cirq.CNOT(r, q),
+                          cirq.Z(q) ** -0.125]
+
+        srq_parity_transform = [cirq.CNOT(s, r),
+                                cirq.CNOT(r, q),
+                                cirq.CNOT(s, r)]
+
+        phase_parity_block = (rq_phase_block +
+                              srq_parity_transform +
+                              rq_phase_block)
+
         yield cirq.CNOT(r, s)
         yield cirq.CNOT(q, p)
         yield cirq.CNOT(q, r)
-
         yield cirq.X(q) ** self.half_turns
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
+        yield phase_parity_block
 
-        yield cirq.CNOT(s, r)
-        yield cirq.CNOT(r, q)
-        yield cirq.CNOT(s, r)
-
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
-        yield cirq.X(p)
         yield cirq.CNOT(p, q)
-        yield cirq.X(p)
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
-
-        yield cirq.CNOT(s, r)
-        yield cirq.CNOT(r, q)
-        yield cirq.CNOT(s, r)
-
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.X(q)
+        yield phase_parity_block
         yield cirq.X(q) ** -self.half_turns
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
-
-        yield cirq.CNOT(s, r)
-        yield cirq.CNOT(r, q)
-        yield cirq.CNOT(s, r)
-
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
-        yield cirq.X(p)
+        yield phase_parity_block
         yield cirq.CNOT(p, q)
-        yield cirq.X(p)
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.X(q)
 
-        yield cirq.CNOT(s, r)
-        yield cirq.CNOT(r, q)
-        yield cirq.CNOT(s, r)
-
-        yield cirq.Z(q) ** 0.125
-        yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
-
+        yield phase_parity_block
         yield cirq.CNOT(q, p)
         yield cirq.CNOT(q, r)
         yield cirq.CNOT(r, s)
