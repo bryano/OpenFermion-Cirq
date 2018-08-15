@@ -63,29 +63,17 @@ class LocalPQRSGate(cirq.EigenGate,
         return self._exponent
 
     def _eigen_components(self):
+        minus_one_component = numpy.zeros((16, 16))
+        minus_one_component[3, 3] = minus_one_component[12, 12] = 0.5
+        minus_one_component[3, 12] = minus_one_component[12, 3] = 0.5
+
+        plus_one_component = numpy.zeros((16, 16))
+        plus_one_component[3, 3] = plus_one_component[12, 12] = 0.5
+        plus_one_component[3, 12] = plus_one_component[12, 3] = -0.5
+
         return [
-            (-1, numpy.array(
-                [[0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)] +
-                [[0, 0, 0, 0.5, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0.5, 0, 0, 0]] +
-                [[0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(8)] +
-                [[0, 0, 0, 0.5, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0.5, 0, 0, 0]] +
-                [[0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)])),
-            (1, numpy.array(
-                [[0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)] +
-                [[0, 0, 0, 0.5, 0, 0, 0, 0,
-                  0, 0, 0, 0, -0.5, 0, 0, 0]] +
-                [[0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(8)] +
-                [[0, 0, 0, -0.5, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0.5, 0, 0, 0]] +
-                [[0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)])),
+            (-1, minus_one_component),
+            (1, plus_one_component),
             (0, numpy.diag([1, 1, 1, 0, 1, 1, 1, 1,
                             1, 1, 1, 1, 0, 1, 1, 1]))
         ]
