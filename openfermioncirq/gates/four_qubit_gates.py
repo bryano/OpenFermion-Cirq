@@ -29,6 +29,19 @@ class LocalPQRSGate(cirq.EigenGate,
                  rads: Optional[float]=None,
                  degs: Optional[float]=None,
                  duration: Optional[float]=None) -> None:
+        """Initialize the gate.
+
+        At most one of half_turns, rads, degs, or duration may be specified.
+        If more are specified, the result is considered ambiguous and an
+        error is thrown. If no argument is given, the default value of one
+        half-turn is used.
+
+        Args:
+            half_turns: The exponent angle, in half-turns.
+            rads: The exponent angle, in radians.
+            degs: The exponent angle, in degrees.
+            duration: The exponent as a duration of time.
+        """
 
         if len([1 for e in [half_turns, rads, degs, duration]
                 if e is not None]) > 1:
@@ -51,14 +64,34 @@ class LocalPQRSGate(cirq.EigenGate,
 
     def _eigen_components(self):
         return [
-            (1, numpy.diag([0, 0, 0, 1, 0, 0, 0, 0,
-                            0, 0, 0, 0, 1, 0, 0, 0])),
-            (-1, numpy.diag([0, 0, 0, 1, 0, 0, 0, 0,
-                             0, 0, 0, 0, -1, 0, 0, 0]))
+            (1, numpy.array(
+                [[0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)] +
+                [[0, 0, 0, 0.5, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0.5, 0, 0, 0]] +
+                [[0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(8)] +
+                [[0, 0, 0, 0.5, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0.5, 0, 0, 0]] +
+                [[0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)])),
+            (-1, numpy.array(
+                [[0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)] +
+                [[0, 0, 0, 0.5, 0, 0, 0, 0,
+                  0, 0, 0, 0, -0.5, 0, 0, 0]] +
+                [[0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(8)] +
+                [[0, 0, 0, -0.5, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0.5, 0, 0, 0]] +
+                [[0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)])),
+            (0, numpy.diag([1, 1, 1, 0, 1, 1, 1, 1,
+                            1, 1, 1, 1, 0, 1, 1, 1]))
         ]
 
     def _canonical_exponent_period(self) -> Optional[float]:
-        return 4
+        return 2
 
     def _with_exponent(self,
                        exponent: Union[cirq.Symbol, float]
@@ -73,58 +106,58 @@ class LocalPQRSGate(cirq.EigenGate,
         yield cirq.CNOT(q, r)
         yield cirq.CNOT(r, s)
 
-        yield cirq.RotXGate(q, half_turns=-self.half_turns)
-        yield cirq.Z(q) ** 0.125
+        yield cirq.X(q) ** -self.half_turns
+        yield cirq.Z(q) ** 0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** 0.25
         yield cirq.X(p)
         yield cirq.CNOT(p, q)
         yield cirq.X(p)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** 0.25
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** 0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
-        yield cirq.RotXGate(q, half_turns=-self.half_turns)
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** -0.25
+        yield cirq.X(q) ** -self.half_turns
+        yield cirq.Z(q) ** 0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** 0.25
         yield cirq.X(p)
         yield cirq.CNOT(p, q)
         yield cirq.X(p)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** 0.25
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** 0.125
+        yield cirq.Z(q) ** 0.25
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.125
+        yield cirq.Z(q) ** -0.25
 
         yield cirq.CNOT(r, s)
         yield cirq.CNOT(q, p)

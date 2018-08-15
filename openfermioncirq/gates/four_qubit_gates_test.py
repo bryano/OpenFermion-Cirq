@@ -32,32 +32,33 @@ def test_pqrs_init_with_multiple_args_fails():
 def test_pqrs_eq():
     eq = EqualsTester()
 
-    eq.add_equality_group(LocalPQRSGate(half_turns=3.5),
+    eq.add_equality_group(LocalPQRSGate(half_turns=1.5),
                           LocalPQRSGate(half_turns=-0.5),
                           LocalPQRSGate(rads=-0.5 * numpy.pi),
                           LocalPQRSGate(degs=-90),
                           LocalPQRSGate(duration=-0.5 * numpy.pi / 2))
 
-    eq.add_equality_group(LocalPQRSGate(half_turns=1.5),
-                          LocalPQRSGate(half_turns=-2.5),
-                          LocalPQRSGate(rads=1.5 * numpy.pi),
-                          LocalPQRSGate(degs=-450),
-                          LocalPQRSGate(duration=-2.5 * numpy.pi / 2))
+    eq.add_equality_group(LocalPQRSGate(half_turns=0.5),
+                          LocalPQRSGate(half_turns=-1.5),
+                          LocalPQRSGate(rads=0.5 * numpy.pi),
+                          LocalPQRSGate(degs=90),
+                          LocalPQRSGate(duration=-1.5 * numpy.pi / 2))
 
     eq.make_equality_group(lambda: LocalPQRSGate(half_turns=0.0))
-    eq.make_equality_group(lambda: LocalPQRSGate(half_turns=0.5))
+    eq.make_equality_group(lambda: LocalPQRSGate(half_turns=0.75))
 
 
-@pytest.mark.skip(reason="skip parametrized tests for now")
-#@pytest.mark.parametrize('half_turns', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
+#@pytest.mark.skip(reason="skip parametrized tests for now")
+@pytest.mark.parametrize('half_turns', [0.25])#, 0.5, 0.25, 0.1, 0.0, -0.5])
 def test_pqrs_decompose(half_turns):
-
-    gate = PQRS**half_turns
+    gate = PQRS ** half_turns
     qubits = cirq.LineQubit.range(4)
     circuit = cirq.Circuit.from_ops(gate.default_decompose(qubits))
     matrix = circuit.to_unitary_matrix(qubit_order=qubits)
+
     cirq.testing.assert_allclose_up_to_global_phase(
-        matrix, gate.matrix(), atol=1e-7)
+        matrix, gate.matrix(), atol=1e-7,
+        err_msg="Difference was {}".format(matrix - gate.matrix()))
 
 
 @pytest.mark.skip(reason="skip parametrized tests for now")
@@ -132,4 +133,28 @@ b: ───Q────────
 c: ───R────────
       │
 d: ───S^-0.5───
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        PQRS(a, c, b, d)**0.2)
+    assert circuit.to_text_diagram().strip() == """
+a: ───P───────
+      │
+b: ───R───────
+      │
+c: ───Q───────
+      │
+d: ───S^0.2───
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        PQRS(d, b, a, c)**0.7)
+    assert circuit.to_text_diagram().strip() == """
+a: ───R───────
+      │
+b: ───Q───────
+      │
+c: ───S───────
+      │
+d: ───P^0.7───
 """.strip()
