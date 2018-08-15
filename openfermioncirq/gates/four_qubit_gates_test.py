@@ -59,38 +59,69 @@ def test_pqrs_decompose(half_turns):
         matrix, gate.matrix(), atol=1e-7)
 
 
-@pytest.mark.skip(reason="skip parametrized tests for now")
-#@pytest.mark.parametrize(
-    #'gate, half_turns, initial_state, correct_state, atol', [
-        #(PQRS, 1.0,
-            #numpy.array([0, 0, 0, 0, 0, 1, 1, 0]) / numpy.sqrt(2),
-            #numpy.array([0, 0, 0, 0, 0, -1j, -1j, 0]) / numpy.sqrt(2),
-            #5e-6),
-        #(PQRS, 0.5,
-            #numpy.array([0, 0, 0, 0, 1, 1, 0, 0]) / numpy.sqrt(2),
-            #numpy.array([0, 0, 0, 0, 1 / numpy.sqrt(2), 0.5, -0.5j, 0]),
-            #5e-6),
-        #(PQRS, -0.5,
-            #numpy.array([0, 0, 0, 0, 1, 1, 0, 0]) / numpy.sqrt(2),
-            #numpy.array([0, 0, 0, 0, 1 / numpy.sqrt(2), 0.5, 0.5j, 0]),
-            #5e-6),
-        #(PQRS, 1.0,
-            #numpy.array([1 / numpy.sqrt(2), 0, 0, 0, 0, 0.5, 0.5, 0]),
-            #numpy.array([1 / numpy.sqrt(2), 0, 0, 0, 0, -0.5j, -0.5j, 0]),
-            #5e-6),
-        #(PQRS, 1.0,
-            #numpy.array([0, 1, 1, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
-            #numpy.array([0, 1, 1, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
-            #5e-6),
-        #(PQRS, 0.5,
-            #numpy.array([1, 1, 0, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
-            #numpy.array([1, 1, 0, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
-            #5e-6),
-        #(PQRS, -0.5,
-            #numpy.array([1, 0, 0, 1, 0, 0, 0, 0]) / numpy.sqrt(2),
-            #numpy.array([1, 0, 0, 1, 0, 0, 0, 0]) / numpy.sqrt(2),
-            #5e-6)
-    #])
+@pytest.mark.parametrize(
+    'gate, half_turns, initial_state, correct_state, atol', [
+        (PQRS, 1.0,
+         numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         numpy.array([1, 1, 1, -1, 1, 1, 1, 1,
+                      1, 1, 1, 1, -1, 1, 1, 1]) / 4.,
+         5e-6),
+        (PQRS, -1.0,
+         numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         numpy.array([1, 1, 1, -1, 1, 1, 1, 1,
+                      1, 1, 1, 1, -1, 1, 1, 1]) / 4.,
+         5e-6),
+        (PQRS, 0.5,
+         numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
+                      0, 0, 0, 0, 0, 0, 0, 0]) / numpy.sqrt(8),
+         numpy.array([1, 1, 1, 0, 1, 1, 1, 1,
+                      0, 0, 0, 0, -1j, 0, 0, 0]) / numpy.sqrt(8),
+         5e-6),
+        (PQRS, -0.5,
+         numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         numpy.array([1, -1, -1, 1j, -1, -1, 1, 1,
+                      1, 1, 1, 1, -1j, 1, 1, 1]) / 4.,
+         5e-6),
+        (PQRS, -1. / 7,
+         numpy.array([1, 1j, -1j, -1, 1, 1j, -1j, -1,
+                      1, 1j, -1j, -1, 1, 1j, -1j, -1]) / 4.,
+         numpy.array([1, 1j, -1j,
+                      -numpy.cos(numpy.pi / 7) + 1j * numpy.sin(numpy.pi / 7),
+                      1, 1j, -1j, -1, 1, 1j, -1j, -1,
+                      numpy.cos(numpy.pi / 7) - 1j * numpy.sin(numpy.pi / 7),
+                      1j, -1j, -1]) / 4.,
+         5e-6),
+        (PQRS, 7. / 3,
+         numpy.array([0, 0, 0, 2,
+                      (1 + 1j) / numpy.sqrt(2), (1 - 1j) / numpy.sqrt(2),
+                      -(1 + 1j) / numpy.sqrt(2), -1,
+                      1, 1j, -1j, -1,
+                      1, 1j, -1j, -1]) / 4.,
+         numpy.array([0, 0, 0, 1 - 1j * numpy.sqrt(3) / 2,
+                      (1 + 1j) / numpy.sqrt(2), (1 - 1j) / numpy.sqrt(2),
+                      -(1 + 1j) / numpy.sqrt(2), -1,
+                      1, 1j, -1j, -1,
+                      0.5 - 1j * numpy.sqrt(3), 1j, -1j, -1]) / 4.,
+         5e-6),
+        (PQRS, 0,
+         numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         5e-6),
+        (PQRS, 0.25,
+         numpy.array([1, 0, 0, -2, 0, 0, 0, 0,
+                      0, 0, 0, 0, 3, 0, 0, 1]) / numpy.sqrt(15),
+         numpy.array([1, 0, 0, -3j / numpy.sqrt(2) - numpy.sqrt(2),
+                      0, 0, 0, 0,
+                      0, 0, 0, 0,
+                      3 / numpy.sqrt(2) + 1j * numpy.sqrt(2), 0, 0, 1]) /
+         numpy.sqrt(15),
+         5e-6)
+    ])
 def test_four_qubit_rotation_gates_on_simulator(
         gate, half_turns, initial_state, correct_state, atol):
 
@@ -155,4 +186,16 @@ b: ───Q───────
 c: ───S───────
       │
 d: ───P^0.7───
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        PQRS(d, b, a, c)**2.3)
+    assert circuit.to_text_diagram().strip() == """
+a: ───R───────
+      │
+b: ───Q───────
+      │
+c: ───S───────
+      │
+d: ───P^0.3───
 """.strip()
