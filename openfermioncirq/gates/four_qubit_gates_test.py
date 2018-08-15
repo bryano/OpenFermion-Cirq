@@ -16,41 +16,42 @@ import pytest
 import cirq
 from cirq.testing import EqualsTester
 
-from openfermioncirq.gates import LocalPQRSGate, PQRS
+from openfermioncirq.gates import DoubleExcitation, DoubleExcitationGate
 
 
-def test_pqrs_repr():
-    assert repr(LocalPQRSGate(half_turns=1)) == 'PQRS'
-    assert repr(LocalPQRSGate(half_turns=0.5)) == 'PQRS**0.5'
+def test_double_excitation_repr():
+    assert repr(DoubleExcitationGate(half_turns=1)) == 'DoubleExcitation'
+    assert repr(DoubleExcitationGate(
+        half_turns=0.5)) == 'DoubleExcitation**0.5'
 
 
-def test_pqrs_init_with_multiple_args_fails():
+def test_double_excitation_init_with_multiple_args_fails():
     with pytest.raises(ValueError):
-        _ = LocalPQRSGate(half_turns=1.0, duration=numpy.pi/2)
+        _ = DoubleExcitationGate(half_turns=1.0, duration=numpy.pi/2)
 
 
-def test_pqrs_eq():
+def test_double_excitation_eq():
     eq = EqualsTester()
 
-    eq.add_equality_group(LocalPQRSGate(half_turns=1.5),
-                          LocalPQRSGate(half_turns=-0.5),
-                          LocalPQRSGate(rads=-0.5 * numpy.pi),
-                          LocalPQRSGate(degs=-90),
-                          LocalPQRSGate(duration=-0.5 * numpy.pi / 2))
+    eq.add_equality_group(DoubleExcitationGate(half_turns=1.5),
+                          DoubleExcitationGate(half_turns=-0.5),
+                          DoubleExcitationGate(rads=-0.5 * numpy.pi),
+                          DoubleExcitationGate(degs=-90),
+                          DoubleExcitationGate(duration=-0.5 * numpy.pi / 2))
 
-    eq.add_equality_group(LocalPQRSGate(half_turns=0.5),
-                          LocalPQRSGate(half_turns=-1.5),
-                          LocalPQRSGate(rads=0.5 * numpy.pi),
-                          LocalPQRSGate(degs=90),
-                          LocalPQRSGate(duration=-1.5 * numpy.pi / 2))
+    eq.add_equality_group(DoubleExcitationGate(half_turns=0.5),
+                          DoubleExcitationGate(half_turns=-1.5),
+                          DoubleExcitationGate(rads=0.5 * numpy.pi),
+                          DoubleExcitationGate(degs=90),
+                          DoubleExcitationGate(duration=-1.5 * numpy.pi / 2))
 
-    eq.make_equality_group(lambda: LocalPQRSGate(half_turns=0.0))
-    eq.make_equality_group(lambda: LocalPQRSGate(half_turns=0.75))
+    eq.make_equality_group(lambda: DoubleExcitationGate(half_turns=0.0))
+    eq.make_equality_group(lambda: DoubleExcitationGate(half_turns=0.75))
 
 
 @pytest.mark.parametrize('half_turns', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
-def test_pqrs_decompose(half_turns):
-    gate = PQRS ** half_turns
+def test_double_excitation_decompose(half_turns):
+    gate = DoubleExcitation ** half_turns
     qubits = cirq.LineQubit.range(4)
     circuit = cirq.Circuit.from_ops(gate.default_decompose(qubits))
     matrix = circuit.to_unitary_matrix(qubit_order=qubits)
@@ -61,31 +62,31 @@ def test_pqrs_decompose(half_turns):
 
 @pytest.mark.parametrize(
     'gate, half_turns, initial_state, correct_state, atol', [
-        (PQRS, 1.0,
+        (DoubleExcitation, 1.0,
          numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          numpy.array([1, 1, 1, -1, 1, 1, 1, 1,
                       1, 1, 1, 1, -1, 1, 1, 1]) / 4.,
          5e-6),
-        (PQRS, -1.0,
+        (DoubleExcitation, -1.0,
          numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          numpy.array([1, 1, 1, -1, 1, 1, 1, 1,
                       1, 1, 1, 1, -1, 1, 1, 1]) / 4.,
          5e-6),
-        (PQRS, 0.5,
+        (DoubleExcitation, 0.5,
          numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
                       0, 0, 0, 0, 0, 0, 0, 0]) / numpy.sqrt(8),
          numpy.array([1, 1, 1, 0, 1, 1, 1, 1,
                       0, 0, 0, 0, -1j, 0, 0, 0]) / numpy.sqrt(8),
          5e-6),
-        (PQRS, -0.5,
+        (DoubleExcitation, -0.5,
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          numpy.array([1, -1, -1, 1j, -1, -1, 1, 1,
                       1, 1, 1, 1, -1j, 1, 1, 1]) / 4.,
          5e-6),
-        (PQRS, -1. / 7,
+        (DoubleExcitation, -1. / 7,
          numpy.array([1, 1j, -1j, -1, 1, 1j, -1j, -1,
                       1, 1j, -1j, -1, 1, 1j, -1j, -1]) / 4.,
          numpy.array([1, 1j, -1j,
@@ -94,7 +95,7 @@ def test_pqrs_decompose(half_turns):
                       numpy.cos(numpy.pi / 7) - 1j * numpy.sin(numpy.pi / 7),
                       1j, -1j, -1]) / 4.,
          5e-6),
-        (PQRS, 7. / 3,
+        (DoubleExcitation, 7. / 3,
          numpy.array([0, 0, 0, 2,
                       (1 + 1j) / numpy.sqrt(2), (1 - 1j) / numpy.sqrt(2),
                       -(1 + 1j) / numpy.sqrt(2), -1,
@@ -106,13 +107,13 @@ def test_pqrs_decompose(half_turns):
                       1, 1j, -1j, -1,
                       0.5 - 1j * numpy.sqrt(3), 1j, -1j, -1]) / 4.,
          5e-6),
-        (PQRS, 0,
+        (DoubleExcitation, 0,
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          5e-6),
-        (PQRS, 0.25,
+        (DoubleExcitation, 0.25,
          numpy.array([1, 0, 0, -2, 0, 0, 0, 0,
                       0, 0, 0, 0, 3, 0, 0, 1]) / numpy.sqrt(15),
          numpy.array([1, 0, 0, -3j / numpy.sqrt(2) - numpy.sqrt(2),
@@ -134,68 +135,135 @@ def test_four_qubit_rotation_gates_on_simulator(
         result.final_state, correct_state, atol=atol)
 
 
-def test_pqrs_gate_text_diagrams():
+def test_double_excitation_gate_text_diagrams():
     a = cirq.NamedQubit('a')
     b = cirq.NamedQubit('b')
     c = cirq.NamedQubit('c')
     d = cirq.NamedQubit('d')
 
     circuit = cirq.Circuit.from_ops(
-        PQRS(a, b, c, d))
+        DoubleExcitation(a, b, c, d))
     assert circuit.to_text_diagram().strip() == """
-a: ───P───
+a: ───⇅───
       │
-b: ───Q───
+b: ───⇅───
       │
-c: ───R───
+c: ───⇵───
       │
-d: ───S───
+d: ───⇵───
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
-        PQRS(a, b, c, d)**-0.5)
+        DoubleExcitation(a, b, c, d)**-0.5)
     assert circuit.to_text_diagram().strip() == """
-a: ───P────────
+a: ───⇅────────
       │
-b: ───Q────────
+b: ───⇅────────
       │
-c: ───R────────
+c: ───⇵────────
       │
-d: ───S^-0.5───
+d: ───⇵^-0.5───
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
-        PQRS(a, c, b, d)**0.2)
+        DoubleExcitation(a, c, b, d)**0.2)
     assert circuit.to_text_diagram().strip() == """
-a: ───P───────
+a: ───⇅───────
       │
-b: ───R───────
+b: ───⇵───────
       │
-c: ───Q───────
+c: ───⇅───────
       │
-d: ───S^0.2───
+d: ───⇵^0.2───
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
-        PQRS(d, b, a, c)**0.7)
+        DoubleExcitation(d, b, a, c)**0.7)
     assert circuit.to_text_diagram().strip() == """
-a: ───R───────
+a: ───⇵───────
       │
-b: ───Q───────
+b: ───⇅───────
       │
-c: ───S───────
+c: ───⇵───────
       │
-d: ───P^0.7───
+d: ───⇅^0.7───
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
-        PQRS(d, b, a, c)**2.3)
+        DoubleExcitation(d, b, a, c)**2.3)
     assert circuit.to_text_diagram().strip() == """
-a: ───R───────
+a: ───⇵───────
       │
-b: ───Q───────
+b: ───⇅───────
       │
-c: ───S───────
+c: ───⇵───────
       │
-d: ───P^0.3───
+d: ───⇅^0.3───
+""".strip()
+
+
+def test_double_excitation_gate_text_diagrams_no_unicode():
+    a = cirq.NamedQubit('a')
+    b = cirq.NamedQubit('b')
+    c = cirq.NamedQubit('c')
+    d = cirq.NamedQubit('d')
+
+    circuit = cirq.Circuit.from_ops(
+        DoubleExcitation(a, b, c, d))
+    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+a: ---(|1><0|+|0><1|)---
+      |
+b: ---(|1><0|+|0><1|)---
+      |
+c: ---(|0><1|+|1><0|)---
+      |
+d: ---(|0><1|+|1><0|)---
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        DoubleExcitation(a, b, c, d)**-0.5)
+    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+a: ---(|1><0|+|0><1|)--------
+      |
+b: ---(|1><0|+|0><1|)--------
+      |
+c: ---(|0><1|+|1><0|)--------
+      |
+d: ---(|0><1|+|1><0|)^-0.5---
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        DoubleExcitation(a, c, b, d)**0.2)
+    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+a: ---(|1><0|+|0><1|)-------
+      |
+b: ---(|0><1|+|1><0|)-------
+      |
+c: ---(|1><0|+|0><1|)-------
+      |
+d: ---(|0><1|+|1><0|)^0.2---
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        DoubleExcitation(d, b, a, c)**0.7)
+    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+a: ---(|0><1|+|1><0|)-------
+      |
+b: ---(|1><0|+|0><1|)-------
+      |
+c: ---(|0><1|+|1><0|)-------
+      |
+d: ---(|1><0|+|0><1|)^0.7---
+""".strip()
+
+    circuit = cirq.Circuit.from_ops(
+        DoubleExcitation(d, b, a, c)**2.3)
+    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+a: ---(|0><1|+|1><0|)-------
+      |
+b: ---(|1><0|+|0><1|)-------
+      |
+c: ---(|0><1|+|1><0|)-------
+      |
+d: ---(|1><0|+|0><1|)^0.3---
 """.strip()

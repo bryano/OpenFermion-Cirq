@@ -19,9 +19,9 @@ import numpy
 import cirq
 
 
-class LocalPQRSGate(cirq.EigenGate,
-                    cirq.CompositeGate,
-                    cirq.TextDiagrammable):
+class DoubleExcitationGate(cirq.EigenGate,
+                           cirq.CompositeGate,
+                           cirq.TextDiagrammable):
     """Evolve under |0011><1100| + h.c. for some time."""
 
     def __init__(self, *,  # Forces keyword args.
@@ -83,8 +83,8 @@ class LocalPQRSGate(cirq.EigenGate,
 
     def _with_exponent(self,
                        exponent: Union[cirq.Symbol, float]
-                       ) -> 'LocalPQRSGate':
-        return LocalPQRSGate(half_turns=exponent)
+                       ) -> 'DoubleExcitationGate':
+        return DoubleExcitationGate(half_turns=exponent)
 
     def default_decompose(self, qubits):
         p, q, r, s = qubits
@@ -97,9 +97,9 @@ class LocalPQRSGate(cirq.EigenGate,
                                 cirq.CNOT(r, q),
                                 cirq.CNOT(s, r)]
 
-        phase_parity_block = (rq_phase_block +
-                              srq_parity_transform +
-                              rq_phase_block)
+        phase_parity_block = [[rq_phase_block,
+                              srq_parity_transform,
+                              rq_phase_block]]
 
         yield cirq.CNOT(r, s)
         yield cirq.CNOT(q, p)
@@ -122,14 +122,20 @@ class LocalPQRSGate(cirq.EigenGate,
 
     def text_diagram_info(self, args: cirq.TextDiagramInfoArgs
                           ) -> cirq.TextDiagramInfo:
-        return cirq.TextDiagramInfo(
-            wire_symbols=('P', 'Q', 'R', 'S'),
-            exponent=self.half_turns)
+        if args.use_unicode_characters:
+            wire_symbols = ('⇅', '⇅', '⇵', '⇵')
+        else:
+            wire_symbols = ('(|1><0|+|0><1|)',
+                            '(|1><0|+|0><1|)',
+                            '(|0><1|+|1><0|)',
+                            '(|0><1|+|1><0|)')
+        return cirq.TextDiagramInfo(wire_symbols=wire_symbols,
+                                    exponent=self.half_turns)
 
     def __repr__(self):
         if self.half_turns == 1:
-            return 'PQRS'
-        return 'PQRS**{!r}'.format(self.half_turns)
+            return 'DoubleExcitation'
+        return 'DoubleExcitation**{!r}'.format(self.half_turns)
 
 
-PQRS = LocalPQRSGate()
+DoubleExcitation = DoubleExcitationGate()

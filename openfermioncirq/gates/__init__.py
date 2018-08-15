@@ -31,5 +31,5 @@ from openfermioncirq.gates.three_qubit_gates import (
     Rot111Gate)
 
 from openfermioncirq.gates.four_qubit_gates import (
-    LocalPQRSGate,
-    PQRS)
+    DoubleExcitation,
+    DoubleExcitationGate)
