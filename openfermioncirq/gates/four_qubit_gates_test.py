@@ -48,8 +48,7 @@ def test_pqrs_eq():
     eq.make_equality_group(lambda: LocalPQRSGate(half_turns=0.75))
 
 
-#@pytest.mark.skip(reason="skip parametrized tests for now")
-@pytest.mark.parametrize('half_turns', [0.25])#, 0.5, 0.25, 0.1, 0.0, -0.5])
+@pytest.mark.parametrize('half_turns', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
 def test_pqrs_decompose(half_turns):
     gate = PQRS ** half_turns
     qubits = cirq.LineQubit.range(4)
@@ -57,8 +56,7 @@ def test_pqrs_decompose(half_turns):
     matrix = circuit.to_unitary_matrix(qubit_order=qubits)
 
     cirq.testing.assert_allclose_up_to_global_phase(
-        matrix, gate.matrix(), atol=1e-7,
-        err_msg="Difference was {}".format(matrix - gate.matrix()))
+        matrix, gate.matrix(), atol=1e-7)
 
 
 @pytest.mark.skip(reason="skip parametrized tests for now")

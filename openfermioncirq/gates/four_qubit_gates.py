@@ -64,7 +64,7 @@ class LocalPQRSGate(cirq.EigenGate,
 
     def _eigen_components(self):
         return [
-            (1, numpy.array(
+            (-1, numpy.array(
                 [[0, 0, 0, 0, 0, 0, 0, 0,
                   0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)] +
                 [[0, 0, 0, 0.5, 0, 0, 0, 0,
@@ -75,7 +75,7 @@ class LocalPQRSGate(cirq.EigenGate,
                   0, 0, 0, 0, 0.5, 0, 0, 0]] +
                 [[0, 0, 0, 0, 0, 0, 0, 0,
                   0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)])),
-            (-1, numpy.array(
+            (1, numpy.array(
                 [[0, 0, 0, 0, 0, 0, 0, 0,
                   0, 0, 0, 0, 0, 0, 0, 0] for i in range(3)] +
                 [[0, 0, 0, 0.5, 0, 0, 0, 0,
@@ -104,62 +104,60 @@ class LocalPQRSGate(cirq.EigenGate,
         yield cirq.CNOT(r, s)
         yield cirq.CNOT(q, p)
         yield cirq.CNOT(q, r)
-        yield cirq.CNOT(r, s)
 
-        yield cirq.X(q) ** -self.half_turns
-        yield cirq.Z(q) ** 0.25
+        yield cirq.X(q) ** self.half_turns
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** -0.125
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** -0.125
         yield cirq.X(p)
         yield cirq.CNOT(p, q)
         yield cirq.X(p)
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** -0.125
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** -0.125
         yield cirq.X(q) ** -self.half_turns
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** -0.125
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** -0.125
         yield cirq.X(p)
         yield cirq.CNOT(p, q)
         yield cirq.X(p)
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** -0.125
 
         yield cirq.CNOT(s, r)
         yield cirq.CNOT(r, q)
         yield cirq.CNOT(s, r)
 
-        yield cirq.Z(q) ** 0.25
+        yield cirq.Z(q) ** 0.125
         yield cirq.CNOT(r, q)
-        yield cirq.Z(q) ** -0.25
+        yield cirq.Z(q) ** -0.125
 
-        yield cirq.CNOT(r, s)
         yield cirq.CNOT(q, p)
         yield cirq.CNOT(q, r)
         yield cirq.CNOT(r, s)
