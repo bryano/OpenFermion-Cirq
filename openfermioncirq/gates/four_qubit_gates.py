@@ -71,12 +71,10 @@ class DoubleExcitationGate(cirq.EigenGate,
         plus_one_component[3, 3] = plus_one_component[12, 12] = 0.5
         plus_one_component[3, 12] = plus_one_component[12, 3] = -0.5
 
-        return [
-            (-1, minus_one_component),
-            (1, plus_one_component),
-            (0, numpy.diag([1, 1, 1, 0, 1, 1, 1, 1,
-                            1, 1, 1, 1, 0, 1, 1, 1]))
-        ]
+        return [(0, numpy.diag([1, 1, 1, 0, 1, 1, 1, 1,
+                                1, 1, 1, 1, 0, 1, 1, 1])),
+                (-1, minus_one_component),
+                (1, plus_one_component)]
 
     def _canonical_exponent_period(self) -> Optional[float]:
         return 2
