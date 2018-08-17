@@ -12,12 +12,57 @@
 
 """Gates that target four qubits."""
 
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 import numpy
 
 import cirq
+from cirq import ops
 
+
+def state_swap_eigen_component(x: str, y: str, sign: int = 1):
+    """The +/- eigen-component of the operation that swaps states x and y.
+
+    For example, state_swap_eigen_component('01', '10') returns
+        ┌              ┐
+        │0, 0,   0,   0│
+        │0, 0.5, 0.5, 0│
+        │0, 0.5, 0.5, 0│
+        │0, 0,   0,   0│
+        └              ┘
+
+    Args:
+        x, y: The states to swap, as bitstrings.
+        sign: The sign of the off-diagonal elements (indicated by +/-1).
+
+    Returns: The eigen-component.
+
+    Raises:
+        ValueError:
+            * x and y have different lengths
+            * x or y contains a character other than '0' and '1'
+            * x and y are the same
+            * sign is not -1 or 1
+        TypeError: x or y is not a string
+    """
+    if not (isinstance(x, str) and isinstance(y, str)):
+        raise TypeError('not (isinstance(x, str) and isinstance(y, str))')
+    if len(x) != len(y):
+        raise ValueError('len(x) != len(y)')
+    if set(x).union(y).difference('01'):
+        raise ValueError('Arguments must be 0-1 strings.')
+    if x == y:
+        raise ValueError('x == y')
+    if sign not in (-1, 1):
+        raise ValueError('s not in (-1, 1)')
+
+    dim = 2 ** len(x)
+    i, j = int(x, 2), int(y, 2)
+
+    component = numpy.zeros((dim, dim))
+    component[i, i] = component[j, j] = 0.5
+    component[i, j] = component[j, i] = sign * 0.5
+    return component
 
 class DoubleExcitationGate(cirq.EigenGate,
                            cirq.CompositeGate,
@@ -137,3 +182,152 @@ class DoubleExcitationGate(cirq.EigenGate,
 
 
 DoubleExcitation = DoubleExcitationGate()
+
+class CombinedDoubleExcitationGate(cirq.EigenGate,
+                           cirq.CompositeGate,
+                           cirq.TextDiagrammable):
+    """Rotates Hamming-weight 2 states into their bitwise complements.
+
+    For weights (t0, t1, t2), evolves under the Hamiltonian
+        t0 |1001><0110| + t1 |0101><1010| + t2 |0011><1100|.
+    """
+
+    def __init__(self,
+                 weights: Tuple[float, float, float]=(1, 1, 1),
+                 absorb_exponent: bool=True,
+                 *,  # Forces keyword args.
+                 half_turns: Optional[Union[cirq.Symbol, float]]=None,
+                 rads: Optional[float]=None,
+                 degs: Optional[float]=None,
+                 duration: Optional[float]=None,
+                 ) -> None:
+        """Initialize the gate.
+
+        At most one of half_turns, rads, degs, or duration may be specified.
+        If more are specified, the result is considered ambiguous and an
+        error is thrown. If no argument is given, the default value of one
+        half-turn is used.
+
+        Args:
+            half_turns: The exponent angle, in half-turns.
+            rads: The exponent angle, in radians.
+            degs: The exponent angle, in degrees.
+            duration: The exponent as a duration of time.
+        """
+
+        self.weights = weights
+
+        if len([1 for e in [half_turns, rads, degs, duration]
+                if e is not None]) > 1:
+            raise ValueError('Redundant exponent specification. '
+                             'Use ONE of half_turns, rads, degs, or duration.')
+
+        if duration is not None:
+            exponent = 2 * duration / numpy.pi
+        else:
+            exponent = cirq.value.chosen_angle_to_half_turns(
+                half_turns=half_turns,
+                rads=rads,
+                degs=degs)
+
+        super().__init__(exponent=exponent)
+
+        if absorb_exponent:
+            self.absorb_exponent_into_weights()
+
+    @property
+    def half_turns(self) -> Union[cirq.Symbol, float]:
+        return self._exponent
+
+    def _eigen_components(self):
+        zero_component = numpy.diag([int(bin(i).count('1') != 2)
+                                     for i in range(16)])
+
+        state_pairs = (('1001', '0110'),
+                       ('0101', '1010'),
+                       ('0011', '1100'))
+
+        plus_minus_components = tuple(
+            (weight * sign / 2, state_swap_eigen_component(*state_pair, sign))
+             for weight, state_pair in zip(self.weights, state_pairs)
+             for sign in (-1, 1))
+
+        return ((0, zero_component),) + plus_minus_components
+
+    def _canonical_exponent_period(self) -> Optional[float]:
+        return None
+
+    def _with_exponent(self,
+                       exponent: Union[cirq.Symbol, float]
+                       ) -> 'CombinedDoubleExcitationGate':
+        return CombinedDoubleExcitationGate(self.weights, half_turns=exponent)
+
+    def default_decompose(self, qubits):
+        a, b, c, d = qubits
+
+        exponents = (
+                (self.weights[0] - self.weights[1] + self.weights[2]) / 4.,
+                (self.weights[0] + self.weights[1] - self.weights[2]) / 4.,
+                (-self.weights[0] + self.weights[1] + self.weights[2]) / 4.,
+                )
+
+        basis_change = list(ops.flatten_op_tree([
+            ops.CNOT(b, a),
+            ops.CNOT(c, b),
+            ops.CNOT(d, c),
+            ops.CNOT(c, b),
+            ops.CNOT(b, a),
+            ops.CNOT(a, b),
+            ops.CNOT(b, c),
+            ops.CNOT(a, b),
+            [ops.X(c), ops.X(d)],
+            [ops.CNOT(c, d), ops.CNOT(d, c)],
+            [ops.X(c), ops.X(d)],
+            ]))
+
+        controlled_Zs = list(ops.flatten_op_tree([
+            ops.Rot11Gate(half_turns=exponents[0])(b, c),
+            ops.CNOT(a, b),
+            ops.Rot11Gate(half_turns=exponents[1])(b, c),
+            ops.CNOT(b, a),
+            ops.CNOT(a, b),
+            ops.Rot11Gate(half_turns=exponents[2])(b, c)
+            ]))
+
+        controlled_swaps = [
+            [ops.CNOT(c, d), ops.H(c)],
+            ops.CNOT(d, c),
+            controlled_Zs,
+            ops.CNOT(d, c),
+            [op.inverse() for op in reversed(controlled_Zs)],
+            [ops.H(c), ops.CNOT(c, d)],
+            ]
+
+        yield basis_change
+        yield controlled_swaps
+        yield basis_change[::-1]
+
+    def text_diagram_info(self, args: cirq.TextDiagramInfoArgs
+                          ) -> cirq.TextDiagramInfo:
+        if args.use_unicode_characters:
+            wire_symbols = ('⇊⇈',) * 4
+        else:
+            wire_symbols = ('(a*a*aa)',) * 4
+        return cirq.TextDiagramInfo(wire_symbols=wire_symbols,
+                                    exponent=self.half_turns)
+
+    def absorb_exponent_into_weights(self):
+        self.weights = tuple((w * self._exponent) % 2 for w in self.weights)
+        self._exponent = 1
+
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return all(numpy.isclose((w * self._exponent) % 2,
+                                 (ww * other._exponent) % 2)
+                   for w, ww in zip(self.weights, other.weights))
+
+    def __repr__(self):
+        weights = tuple(w * self._exponent for w in self.weights)
+        return 'CombinedDoubleExcitation' + str(weights)
