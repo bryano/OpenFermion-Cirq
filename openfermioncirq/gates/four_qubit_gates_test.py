@@ -92,6 +92,22 @@ def test_double_excitation_decompose(half_turns):
     cirq.testing.assert_allclose_up_to_global_phase(
         matrix, gate.matrix(), atol=1e-7)
 
+@pytest.mark.parametrize('weights', numpy.random.rand(10, 3))
+def test_weights_and_exponent(weights):
+    exponents = numpy.linspace(-1, 1, 8)
+    gates = tuple(
+            CombinedDoubleExcitationGate(weights / exponent,
+                                         half_turns=exponent)
+            for exponent in exponents)
+
+    EqualsTester().add_equality_group(*gates)
+
+    for i, (gate, exponent) in enumerate(zip(gates, exponents)):
+        assert gate.half_turns == 1
+        new_exponent = exponents[-i]
+        new_gate = gate._with_exponent(new_exponent)
+        assert new_gate.half_turns == new_exponent
+
 
 @pytest.mark.parametrize(
     'gate, half_turns, initial_state, correct_state, atol', [
@@ -351,6 +367,46 @@ def test_combined_double_excitation_eq():
             lambda: CombinedDoubleExcitationGate(
                 (1., -1., 0.5), half_turns=0.75))
 
+
+def test_combined_double_excitation_gate_text_diagram():
+    gate = CombinedDoubleExcitationGate((1,1,1))
+    qubits = cirq.LineQubit.range(6)
+    circuit = cirq.Circuit.from_ops(
+            [gate(*qubits[:4]), gate(*qubits[-4:])])
+
+    actual_text_diagram = circuit.to_text_diagram()
+    expected_text_diagram = """
+0: ───⇊⇈────────
+      │
+1: ───⇊⇈────────
+      │
+2: ───⇊⇈───⇊⇈───
+      │    │
+3: ───⇊⇈───⇊⇈───
+           │
+4: ────────⇊⇈───
+           │
+5: ────────⇊⇈───
+    """.strip()
+    assert actual_text_diagram == expected_text_diagram
+
+    actual_text_diagram = circuit.to_text_diagram(use_unicode_characters=False)
+    expected_text_diagram = """
+0: ---a*a*aa------------
+      |
+1: ---a*a*aa------------
+      |
+2: ---a*a*aa---a*a*aa---
+      |        |
+3: ---a*a*aa---a*a*aa---
+               |
+4: ------------a*a*aa---
+               |
+5: ------------a*a*aa---
+    """.strip()
+    assert actual_text_diagram == expected_text_diagram
+
+
 test_weights = [1.0, 0.5, 0.25, 0.1, 0.0, -0.5]
 @pytest.mark.parametrize('weights', itertools.chain(
         itertools.product(test_weights, repeat=3),
@@ -358,7 +414,6 @@ test_weights = [1.0, 0.5, 0.25, 0.1, 0.0, -0.5]
         ))
 def test_combined_double_excitation_decompose(weights):
     gate = CombinedDoubleExcitationGate(weights)
-    eigen_components = gate._eigen_components()
     qubits = cirq.LineQubit.range(4)
     circuit = cirq.Circuit.from_ops(gate.default_decompose(qubits))
     circuit_matrix = circuit.to_unitary_matrix(qubit_order=qubits)

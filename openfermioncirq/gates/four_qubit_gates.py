@@ -260,7 +260,9 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
     def _with_exponent(self,
                        exponent: Union[cirq.Symbol, float]
                        ) -> 'CombinedDoubleExcitationGate':
-        return CombinedDoubleExcitationGate(self.weights, half_turns=exponent)
+        gate = CombinedDoubleExcitationGate(self.weights)
+        gate._exponent = exponent
+        return gate
 
     def default_decompose(self, qubits):
         a, b, c, d = qubits
@@ -312,7 +314,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
         if args.use_unicode_characters:
             wire_symbols = ('⇊⇈',) * 4
         else:
-            wire_symbols = ('(a*a*aa)',) * 4
+            wire_symbols = ('a*a*aa',) * 4
         return cirq.TextDiagramInfo(wire_symbols=wire_symbols,
                                     exponent=self.half_turns)
 
