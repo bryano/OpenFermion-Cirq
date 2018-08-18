@@ -199,7 +199,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
                  half_turns: Optional[Union[cirq.Symbol, float]]=None,
                  rads: Optional[float]=None,
                  degs: Optional[float]=None,
-                 duration: Optional[float]=None,
+                 duration: Optional[float]=None
                  ) -> None:
         """Initialize the gate.
 
