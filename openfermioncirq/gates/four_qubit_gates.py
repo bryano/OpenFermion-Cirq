@@ -248,7 +248,8 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
                        ('0011', '1100'))
 
         plus_minus_components = tuple(
-            (weight * sign / 2, state_swap_eigen_component(state_pair[0], state_pair[1], sign))
+            (weight * sign / 2,
+             state_swap_eigen_component(state_pair[0], state_pair[1], sign))
              for weight, state_pair in zip(self.weights, state_pairs)
              for sign in (-1, 1))
 

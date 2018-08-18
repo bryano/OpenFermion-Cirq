@@ -46,7 +46,8 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
     i, j = index_pair
     dim = 2 ** n_qubits
     for sign in (-1, 1):
-        actual_component = state_swap_eigen_component(state_pair[0], state_pair[1], sign)
+        actual_component = state_swap_eigen_component(
+                state_pair[0], state_pair[1], sign)
         expected_component = numpy.zeros((dim, dim))
         expected_component[i, i] = expected_component[j, j] = 0.5
         expected_component[i, j] = expected_component[j, i] = sign * 0.5
