@@ -12,11 +12,13 @@
 
 """Gates that target four qubits."""
 
+
 from typing import Optional, Union, Tuple
 
 import numpy
 
 import cirq
+
 from cirq import ops
 
 
@@ -64,10 +66,11 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1):
     component[i, j] = component[j, i] = sign * 0.5
     return component
 
+
 class DoubleExcitationGate(cirq.EigenGate,
                            cirq.CompositeGate,
                            cirq.TextDiagrammable):
-    """Evolve under |0011><1100| + h.c. for some time."""
+    """Evolve under -|0011><1100| + h.c. for some time."""
 
     def __init__(self, *,  # Forces keyword args.
                  half_turns: Optional[Union[cirq.Symbol, float]]=None,
@@ -110,11 +113,11 @@ class DoubleExcitationGate(cirq.EigenGate,
     def _eigen_components(self):
         minus_one_component = numpy.zeros((16, 16))
         minus_one_component[3, 3] = minus_one_component[12, 12] = 0.5
-        minus_one_component[3, 12] = minus_one_component[12, 3] = 0.5
+        minus_one_component[3, 12] = minus_one_component[12, 3] = -0.5
 
         plus_one_component = numpy.zeros((16, 16))
         plus_one_component[3, 3] = plus_one_component[12, 12] = 0.5
-        plus_one_component[3, 12] = plus_one_component[12, 3] = -0.5
+        plus_one_component[3, 12] = plus_one_component[12, 3] = 0.5
 
         return [(0, numpy.diag([1, 1, 1, 0, 1, 1, 1, 1,
                                 1, 1, 1, 1, 0, 1, 1, 1])),
@@ -147,13 +150,13 @@ class DoubleExcitationGate(cirq.EigenGate,
         yield cirq.CNOT(r, s)
         yield cirq.CNOT(q, p)
         yield cirq.CNOT(q, r)
-        yield cirq.X(q) ** self.half_turns
+        yield cirq.X(q) ** -self.half_turns
         yield phase_parity_block
 
         yield cirq.CNOT(p, q)
         yield cirq.X(q)
         yield phase_parity_block
-        yield cirq.X(q) ** -self.half_turns
+        yield cirq.X(q) ** self.half_turns
         yield phase_parity_block
         yield cirq.CNOT(p, q)
         yield cirq.X(q)
@@ -168,10 +171,10 @@ class DoubleExcitationGate(cirq.EigenGate,
         if args.use_unicode_characters:
             wire_symbols = ('⇅', '⇅', '⇵', '⇵')
         else:
-            wire_symbols = ('(|1><0|+|0><1|)',
-                            '(|1><0|+|0><1|)',
-                            '(|0><1|+|1><0|)',
-                            '(|0><1|+|1><0|)')
+            wire_symbols = ('/\\ \/',
+                            '/\\ \/',
+                            '\/ /\\',
+                            '\/ /\\')
         return cirq.TextDiagramInfo(wire_symbols=wire_symbols,
                                     exponent=self.half_turns)
 
@@ -182,6 +185,7 @@ class DoubleExcitationGate(cirq.EigenGate,
 
 
 DoubleExcitation = DoubleExcitationGate()
+
 
 class CombinedDoubleExcitationGate(cirq.EigenGate,
                            cirq.CompositeGate,

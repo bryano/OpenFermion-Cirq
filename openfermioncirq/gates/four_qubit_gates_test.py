@@ -14,8 +14,11 @@ import itertools
 
 import numpy
 import pytest
+import scipy
 
 import cirq
+import openfermion
+
 from cirq.testing import EqualsTester
 
 from openfermioncirq.gates import (
@@ -52,6 +55,7 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
         expected_component[i, i] = expected_component[j, j] = 0.5
         expected_component[i, j] = expected_component[j, i] = sign * 0.5
         assert numpy.allclose(actual_component, expected_component)
+
 
 def test_double_excitation_repr():
     assert repr(DoubleExcitationGate(half_turns=1)) == 'DoubleExcitation'
@@ -93,6 +97,7 @@ def test_double_excitation_decompose(half_turns):
     cirq.testing.assert_allclose_up_to_global_phase(
         matrix, gate.matrix(), atol=1e-7)
 
+
 @pytest.mark.parametrize('weights', numpy.random.rand(10, 3))
 def test_weights_and_exponent(weights):
     exponents = numpy.linspace(-1, 1, 8)
@@ -128,21 +133,21 @@ def test_weights_and_exponent(weights):
          numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
                       0, 0, 0, 0, 0, 0, 0, 0]) / numpy.sqrt(8),
          numpy.array([1, 1, 1, 0, 1, 1, 1, 1,
-                      0, 0, 0, 0, -1j, 0, 0, 0]) / numpy.sqrt(8),
+                      0, 0, 0, 0, 1j, 0, 0, 0]) / numpy.sqrt(8),
          5e-6),
         (DoubleExcitation, -0.5,
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
-         numpy.array([1, -1, -1, 1j, -1, -1, 1, 1,
-                      1, 1, 1, 1, -1j, 1, 1, 1]) / 4.,
+         numpy.array([1, -1, -1, -1j, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1j, 1, 1, 1]) / 4.,
          5e-6),
         (DoubleExcitation, -1. / 7,
          numpy.array([1, 1j, -1j, -1, 1, 1j, -1j, -1,
                       1, 1j, -1j, -1, 1, 1j, -1j, -1]) / 4.,
          numpy.array([1, 1j, -1j,
-                      -numpy.cos(numpy.pi / 7) + 1j * numpy.sin(numpy.pi / 7),
+                      -numpy.cos(numpy.pi / 7) - 1j * numpy.sin(numpy.pi / 7),
                       1, 1j, -1j, -1, 1, 1j, -1j, -1,
-                      numpy.cos(numpy.pi / 7) - 1j * numpy.sin(numpy.pi / 7),
+                      numpy.cos(numpy.pi / 7) + 1j * numpy.sin(numpy.pi / 7),
                       1j, -1j, -1]) / 4.,
          5e-6),
         (DoubleExcitation, 7. / 3,
@@ -151,11 +156,11 @@ def test_weights_and_exponent(weights):
                       -(1 + 1j) / numpy.sqrt(2), -1,
                       1, 1j, -1j, -1,
                       1, 1j, -1j, -1]) / 4.,
-         numpy.array([0, 0, 0, 1 - 1j * numpy.sqrt(3) / 2,
+         numpy.array([0, 0, 0, 1 + 1j * numpy.sqrt(3) / 2,
                       (1 + 1j) / numpy.sqrt(2), (1 - 1j) / numpy.sqrt(2),
                       -(1 + 1j) / numpy.sqrt(2), -1,
                       1, 1j, -1j, -1,
-                      0.5 - 1j * numpy.sqrt(3), 1j, -1j, -1]) / 4.,
+                      0.5 + 1j * numpy.sqrt(3), 1j, -1j, -1]) / 4.,
          5e-6),
         (DoubleExcitation, 0,
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
@@ -166,10 +171,10 @@ def test_weights_and_exponent(weights):
         (DoubleExcitation, 0.25,
          numpy.array([1, 0, 0, -2, 0, 0, 0, 0,
                       0, 0, 0, 0, 3, 0, 0, 1]) / numpy.sqrt(15),
-         numpy.array([1, 0, 0, -3j / numpy.sqrt(2) - numpy.sqrt(2),
+         numpy.array([1, 0, 0, +3j / numpy.sqrt(2) - numpy.sqrt(2),
                       0, 0, 0, 0,
                       0, 0, 0, 0,
-                      3 / numpy.sqrt(2) + 1j * numpy.sqrt(2), 0, 0, 1]) /
+                      3 / numpy.sqrt(2) - 1j * numpy.sqrt(2), 0, 0, 1]) /
          numpy.sqrt(15),
          5e-6)
     ])
@@ -261,62 +266,78 @@ def test_double_excitation_gate_text_diagrams_no_unicode():
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, b, c, d))
     assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
-a: ---(|1><0|+|0><1|)---
+a: ---/\ \/---
       |
-b: ---(|1><0|+|0><1|)---
+b: ---/\ \/---
       |
-c: ---(|0><1|+|1><0|)---
+c: ---\/ /\---
       |
-d: ---(|0><1|+|1><0|)---
+d: ---\/ /\---
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, b, c, d)**-0.5)
     assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
-a: ---(|1><0|+|0><1|)--------
+a: ---/\ \/--------
       |
-b: ---(|1><0|+|0><1|)--------
+b: ---/\ \/--------
       |
-c: ---(|0><1|+|1><0|)--------
+c: ---\/ /\--------
       |
-d: ---(|0><1|+|1><0|)^-0.5---
+d: ---\/ /\^-0.5---
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, c, b, d)**0.2)
     assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
-a: ---(|1><0|+|0><1|)-------
+a: ---/\ \/-------
       |
-b: ---(|0><1|+|1><0|)-------
+b: ---\/ /\-------
       |
-c: ---(|1><0|+|0><1|)-------
+c: ---/\ \/-------
       |
-d: ---(|0><1|+|1><0|)^0.2---
+d: ---\/ /\^0.2---
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(d, b, a, c)**0.7)
     assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
-a: ---(|0><1|+|1><0|)-------
+a: ---\/ /\-------
       |
-b: ---(|1><0|+|0><1|)-------
+b: ---/\ \/-------
       |
-c: ---(|0><1|+|1><0|)-------
+c: ---\/ /\-------
       |
-d: ---(|1><0|+|0><1|)^0.7---
+d: ---/\ \/^0.7---
 """.strip()
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(d, b, a, c)**2.3)
     assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
-a: ---(|0><1|+|1><0|)-------
+a: ---\/ /\-------
       |
-b: ---(|1><0|+|0><1|)-------
+b: ---/\ \/-------
       |
-c: ---(|0><1|+|1><0|)-------
+c: ---\/ /\-------
       |
-d: ---(|1><0|+|0><1|)^0.3---
+d: ---/\ \/^0.3---
 """.strip()
+
+
+@pytest.mark.parametrize('half_turns', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
+def test_double_excitation_matches_fermionic_evolution(half_turns):
+    gate = DoubleExcitation ** half_turns
+
+    op = openfermion.FermionOperator('3^ 2^ 1 0')
+    op += openfermion.hermitian_conjugated(op)
+    matrix_op = openfermion.get_sparse_operator(op)
+
+    time_evol_op = scipy.linalg.expm(-1j * matrix_op * half_turns * numpy.pi)
+    time_evol_op = time_evol_op.todense()
+
+    cirq.testing.assert_allclose_up_to_global_phase(
+        gate.matrix(), time_evol_op, atol=1e-7)
+
 
 def test_combined_double_excitation_repr():
     weights = (0, 0, 0)
