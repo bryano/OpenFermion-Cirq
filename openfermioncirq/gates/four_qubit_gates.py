@@ -19,19 +19,17 @@ import numpy
 
 import cirq
 
-from cirq import ops
-
 
 def state_swap_eigen_component(x: str, y: str, sign: int = 1):
     """The +/- eigen-component of the operation that swaps states x and y.
 
-    For example, state_swap_eigen_component('01', '10') returns
-        ┌              ┐
-        │0, 0,   0,   0│
-        │0, 0.5, 0.5, 0│
-        │0, 0.5, 0.5, 0│
-        │0, 0,   0,   0│
-        └              ┘
+    For example, state_swap_eigen_component('01', '10', sign) returns
+        ┌                             ┐
+        │0, 0,           0,          0│
+        │0, 0.5,         0.5 * sign, 0│
+        │0, 0.5 * sign,  0.5,        0│
+        │0, 0,           0,          0│
+        └                             ┘
 
     Args:
         x, y: The states to swap, as bitstrings.
@@ -56,7 +54,7 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1):
     if x == y:
         raise ValueError('x == y')
     if sign not in (-1, 1):
-        raise ValueError('s not in (-1, 1)')
+        raise ValueError('sign not in (-1, 1)')
 
     dim = 2 ** len(x)
     i, j = int(x, 2), int(y, 2)
@@ -192,8 +190,10 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
                            cirq.TextDiagrammable):
     """Rotates Hamming-weight 2 states into their bitwise complements.
 
-    For weights (t0, t1, t2), evolves under the Hamiltonian
-        t0 |1001><0110| + t1 |0101><1010| + t2 |0011><1100|.
+    For weights (t0, t1, t2), is equivalent to 
+        exp(0.5 pi i (t0 (|1001><0110| + |0110><1001|) + 
+                      t1 (|0101><1010| + |1010><0101|) + 
+                      t2 (|0011><1100| + |1100><0011|)))
     """
 
     def __init__(self,
@@ -244,6 +244,8 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
         return self._exponent
 
     def _eigen_components(self):
+        # projector onto subspace spanned by basis states with
+        # Hamming weight != 2
         zero_component = numpy.diag([int(bin(i).count('1') != 2)
                                      for i in range(16)])
 
@@ -273,41 +275,41 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
         a, b, c, d = qubits
 
         exponents = (
-                (self.weights[0] - self.weights[1] + self.weights[2]) / 4.,
-                (self.weights[0] + self.weights[1] - self.weights[2]) / 4.,
-                (-self.weights[0] + self.weights[1] + self.weights[2]) / 4.,
+                self._exponent * (self.weights[0] - self.weights[1] + self.weights[2]) / 4.,
+                self._exponent * (self.weights[0] + self.weights[1] - self.weights[2]) / 4.,
+                self._exponent * (-self.weights[0] + self.weights[1] + self.weights[2]) / 4.,
                 )
 
-        basis_change = list(ops.flatten_op_tree([
-            ops.CNOT(b, a),
-            ops.CNOT(c, b),
-            ops.CNOT(d, c),
-            ops.CNOT(c, b),
-            ops.CNOT(b, a),
-            ops.CNOT(a, b),
-            ops.CNOT(b, c),
-            ops.CNOT(a, b),
-            [ops.X(c), ops.X(d)],
-            [ops.CNOT(c, d), ops.CNOT(d, c)],
-            [ops.X(c), ops.X(d)],
+        basis_change = list(cirq.flatten_op_tree([
+            cirq.CNOT(b, a),
+            cirq.CNOT(c, b),
+            cirq.CNOT(d, c),
+            cirq.CNOT(c, b),
+            cirq.CNOT(b, a),
+            cirq.CNOT(a, b),
+            cirq.CNOT(b, c),
+            cirq.CNOT(a, b),
+            [cirq.X(c), cirq.X(d)],
+            [cirq.CNOT(c, d), cirq.CNOT(d, c)],
+            [cirq.X(c), cirq.X(d)],
             ]))
 
-        controlled_Zs = list(ops.flatten_op_tree([
-            ops.Rot11Gate(half_turns=exponents[0])(b, c),
-            ops.CNOT(a, b),
-            ops.Rot11Gate(half_turns=exponents[1])(b, c),
-            ops.CNOT(b, a),
-            ops.CNOT(a, b),
-            ops.Rot11Gate(half_turns=exponents[2])(b, c)
+        controlled_Zs = list(cirq.flatten_op_tree([
+            cirq.Rot11Gate(half_turns=exponents[0])(b, c),
+            cirq.CNOT(a, b),
+            cirq.Rot11Gate(half_turns=exponents[1])(b, c),
+            cirq.CNOT(b, a),
+            cirq.CNOT(a, b),
+            cirq.Rot11Gate(half_turns=exponents[2])(b, c)
             ]))
 
         controlled_swaps = [
-            [ops.CNOT(c, d), ops.H(c)],
-            ops.CNOT(d, c),
+            [cirq.CNOT(c, d), cirq.H(c)],
+            cirq.CNOT(d, c),
             controlled_Zs,
-            ops.CNOT(d, c),
+            cirq.CNOT(d, c),
             [op.inverse() for op in reversed(controlled_Zs)],
-            [ops.H(c), ops.CNOT(c, d)],
+            [cirq.H(c), cirq.CNOT(c, d)],
             ]
 
         yield basis_change
@@ -324,15 +326,15 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
                                     exponent=self.half_turns)
 
     def absorb_exponent_into_weights(self):
-        self.weights = tuple((w * self._exponent) % 2 for w in self.weights)
+        self.weights = tuple((w * self._exponent) % 4 for w in self.weights)
         self._exponent = 1
 
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
-        return all(numpy.isclose((w * self._exponent) % 2,
-                                 (ww * other._exponent) % 2)
+        return all(numpy.isclose((w * self._exponent) % 4,
+                                 (ww * other._exponent) % 4)
                    for w, ww in zip(self.weights, other.weights))
 
     def __repr__(self):

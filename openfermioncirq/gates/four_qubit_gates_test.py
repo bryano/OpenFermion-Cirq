@@ -115,8 +115,7 @@ def test_weights_and_exponent(weights):
         assert new_gate.half_turns == new_exponent
 
 
-@pytest.mark.parametrize(
-    'gate, half_turns, initial_state, correct_state, atol', [
+double_excitation_simulator_test_cases = [
         (DoubleExcitation, 1.0,
          numpy.array([1, 1, 1, 1, 1, 1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
@@ -177,7 +176,53 @@ def test_weights_and_exponent(weights):
                       3 / numpy.sqrt(2) - 1j * numpy.sqrt(2), 0, 0, 1]) /
          numpy.sqrt(15),
          5e-6)
-    ])
+    ]
+combined_double_excitation_simulator_test_cases = [
+        (CombinedDoubleExcitationGate((0, 0, 0)), 1.,
+         numpy.ones(16) / 4.,
+         numpy.ones(16) / 4.,
+         5e-6),
+        (CombinedDoubleExcitationGate((0.2, -0.1, 0.7)), 0.,
+         numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         5e-6),
+        (CombinedDoubleExcitationGate((1. / 3, 0, 0)), 1.,
+         numpy.array([0, 0, 0, 0, 0, 0, 1., 0,
+                      0, 1., 0, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
+         numpy.array([0, 0, 0, 0, 0, 0, 1., 0,
+                      0, 1., 0, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
+         5e-6),
+        (CombinedDoubleExcitationGate((0, -2. / 3, 0)), 1.,
+         numpy.array([1., 1., 0, 0, 0, 1., 0, 0,
+                      0, 0., -1., 0, 0, 0, 0, 0]) / 2.,
+         numpy.array([1., 1., 0, 0, 0, -numpy.exp(4j * numpy.pi / 3), 0, 0,
+                      0, 0., -numpy.exp(1j * numpy.pi / 3), 0, 0, 0, 0, 0]) / 2.,
+         5e-6),
+        (CombinedDoubleExcitationGate((0, 0, 1)), 1.,
+         numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 
+                      0, 0, 0, 0, 1., 0, 0, 0]),
+         numpy.array([0, 0, 0, 1, 0, 0, 0, 0, 
+                      0, 0, 0, 0, 0, 0, 0, 0]),
+         5e-6),
+        (CombinedDoubleExcitationGate((0, 0, 0.5)), 1.,
+         numpy.array([0, 0, 0, 1, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 0, 0]),
+         numpy.array([0, 0, 0, 1, 0, 0, 0, 0,
+                      0, 0, 0, 0, 1j, 0, 0, 0]) / numpy.sqrt(2),
+         5e-6),
+        (CombinedDoubleExcitationGate((0.5, -1./3, 1.)), 1.,
+         numpy.array([0, 0, 0, 0, 0, 0, 1, 0,
+                      0, 0, 1, 0, 1, 0, 0, 0]) / numpy.sqrt(3),
+         numpy.array([0, 0, 0, 1j, 0, -1j / 2., 1 / numpy.sqrt(2), 0,
+                      0, 1j / numpy.sqrt(2), numpy.sqrt(3) / 2, 0, 0, 0, 0, 0]) / numpy.sqrt(3),
+         5e-6),
+        ]
+@pytest.mark.parametrize(
+    'gate, half_turns, initial_state, correct_state, atol',
+    double_excitation_simulator_test_cases + 
+    combined_double_excitation_simulator_test_cases)
 def test_four_qubit_rotation_gates_on_simulator(
         gate, half_turns, initial_state, correct_state, atol):
 
@@ -186,6 +231,7 @@ def test_four_qubit_rotation_gates_on_simulator(
     circuit = cirq.Circuit.from_ops(gate(a, b, c, d)**half_turns)
     initial_state = initial_state.astype(numpy.complex64)
     result = simulator.simulate(circuit, initial_state=initial_state)
+    print(result.final_state - correct_state)
     cirq.testing.assert_allclose_up_to_global_phase(
         result.final_state, correct_state, atol=atol)
 
@@ -346,10 +392,10 @@ def test_combined_double_excitation_repr():
 
     weights = (0.2, 0.6, -0.4)
     gate = CombinedDoubleExcitationGate(weights)
-    assert (repr(gate) == 'CombinedDoubleExcitation(0.2, 0.6, 1.6)')
+    assert (repr(gate) == 'CombinedDoubleExcitation(0.2, 0.6, 3.6)')
 
     gate **=0.5
-    assert (repr(gate) == 'CombinedDoubleExcitation(0.1, 0.3, 0.8)')
+    assert (repr(gate) == 'CombinedDoubleExcitation(0.1, 0.3, 1.8)')
 
 def test_combined_double_excitation_init_with_multiple_args_fails():
     with pytest.raises(ValueError):
@@ -364,7 +410,7 @@ def test_combined_double_excitation_eq():
             CombinedDoubleExcitationGate((1.2, 0.4, -0.4), half_turns=0.5),
             CombinedDoubleExcitationGate((0.3, 0.1, -0.1), half_turns=2),
             CombinedDoubleExcitationGate((-0.6, -0.2, 0.2), half_turns=-1),
-            CombinedDoubleExcitationGate((0.6, 0.2, 1.8)),
+            CombinedDoubleExcitationGate((0.6, 0.2, 3.8)),
             CombinedDoubleExcitationGate(
                 (1.2, 0.4, -0.4), rads=0.5 * numpy.pi),
             CombinedDoubleExcitationGate((1.2, 0.4, -0.4), degs=90),
