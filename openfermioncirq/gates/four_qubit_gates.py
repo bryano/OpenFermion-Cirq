@@ -23,13 +23,13 @@ import cirq
 def state_swap_eigen_component(x: str, y: str, sign: int = 1):
     """The +/- eigen-component of the operation that swaps states x and y.
 
-    For example, state_swap_eigen_component('01', '10', sign) returns
-        ┌                             ┐
-        │0, 0,           0,          0│
-        │0, 0.5,         0.5 * sign, 0│
-        │0, 0.5 * sign,  0.5,        0│
-        │0, 0,           0,          0│
-        └                             ┘
+    For example, state_swap_eigen_component('01', '10', ±1) returns
+        ┌             ┐
+        │0 0    0    0│
+        │0 0.5  ±0.5 0│
+        │0 ±0.5 0.5  0│
+        │0 0    0    0│
+        └             ┘
 
     Args:
         x, y: The states to swap, as bitstrings.

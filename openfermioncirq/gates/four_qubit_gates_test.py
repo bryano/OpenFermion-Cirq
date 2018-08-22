@@ -188,6 +188,16 @@ combined_double_excitation_simulator_test_cases = [
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          5e-6),
+        (CombinedDoubleExcitationGate((0.2, -0.1, 0.7)), 0.3,
+         numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
+         numpy.array([1, -1, -1, -numpy.exp(-numpy.pi * 0.105j),
+                      -1, -numpy.exp(-numpy.pi * 0.585j),
+                      numpy.exp(numpy.pi * 0.03j), 1,
+                      1, numpy.exp(numpy.pi * 0.03j),
+                      numpy.exp(-numpy.pi * 0.585j), 1,
+                      numpy.exp(-numpy.pi * 0.105j), 1, 1, 1]) / 4.,
+         5e-6),
         (CombinedDoubleExcitationGate((1. / 3, 0, 0)), 1.,
          numpy.array([0, 0, 0, 0, 0, 0, 1., 0,
                       0, 1., 0, 0, 0, 0, 0, 0]) / numpy.sqrt(2),
@@ -233,7 +243,6 @@ def test_four_qubit_rotation_gates_on_simulator(
     circuit = cirq.Circuit.from_ops(gate(a, b, c, d)**half_turns)
     initial_state = initial_state.astype(numpy.complex64)
     result = simulator.simulate(circuit, initial_state=initial_state)
-    print(result.final_state - correct_state)
     cirq.testing.assert_allclose_up_to_global_phase(
         result.final_state, correct_state, atol=atol)
 
