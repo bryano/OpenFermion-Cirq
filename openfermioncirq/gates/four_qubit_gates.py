@@ -213,6 +213,9 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
         half-turn is used.
 
         Args:
+            weights: The weights of the terms in the Hamiltonian.
+            absorb_exponent: Whether to absorb the given exponent into the
+                weights. If true, the exponent of the returned gate is 1.
             half_turns: The exponent angle, in half-turns.
             rads: The exponent angle, in radians.
             degs: The exponent angle, in degrees.
