@@ -198,12 +198,13 @@ combined_double_excitation_simulator_test_cases = [
          numpy.array([1., 1., 0, 0, 0, 1., 0, 0,
                       0, 0., -1., 0, 0, 0, 0, 0]) / 2.,
          numpy.array([1., 1., 0, 0, 0, -numpy.exp(4j * numpy.pi / 3), 0, 0,
-                      0, 0., -numpy.exp(1j * numpy.pi / 3), 0, 0, 0, 0, 0]) / 2.,
+                      0, 0., -numpy.exp(1j * numpy.pi / 3), 0, 0, 0, 0, 0]
+                     ) / 2.,
          5e-6),
         (CombinedDoubleExcitationGate((0, 0, 1)), 1.,
-         numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 
+         numpy.array([0, 0, 0, 0, 0, 0, 0, 0,
                       0, 0, 0, 0, 1., 0, 0, 0]),
-         numpy.array([0, 0, 0, 1, 0, 0, 0, 0, 
+         numpy.array([0, 0, 0, 1, 0, 0, 0, 0,
                       0, 0, 0, 0, 0, 0, 0, 0]),
          5e-6),
         (CombinedDoubleExcitationGate((0, 0, 0.5)), 1.,
@@ -216,12 +217,13 @@ combined_double_excitation_simulator_test_cases = [
          numpy.array([0, 0, 0, 0, 0, 0, 1, 0,
                       0, 0, 1, 0, 1, 0, 0, 0]) / numpy.sqrt(3),
          numpy.array([0, 0, 0, 1j, 0, -1j / 2., 1 / numpy.sqrt(2), 0,
-                      0, 1j / numpy.sqrt(2), numpy.sqrt(3) / 2, 0, 0, 0, 0, 0]) / numpy.sqrt(3),
+                      0, 1j / numpy.sqrt(2), numpy.sqrt(3) / 2, 0, 0, 0, 0, 0]
+                     ) / numpy.sqrt(3),
          5e-6),
         ]
 @pytest.mark.parametrize(
     'gate, half_turns, initial_state, correct_state, atol',
-    double_excitation_simulator_test_cases + 
+    double_excitation_simulator_test_cases +
     combined_double_excitation_simulator_test_cases)
 def test_four_qubit_rotation_gates_on_simulator(
         gate, half_turns, initial_state, correct_state, atol):

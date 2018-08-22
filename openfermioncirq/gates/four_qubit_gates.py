@@ -190,9 +190,9 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
                            cirq.TextDiagrammable):
     """Rotates Hamming-weight 2 states into their bitwise complements.
 
-    For weights (t0, t1, t2), is equivalent to 
-        exp(0.5 pi i (t0 (|1001><0110| + |0110><1001|) + 
-                      t1 (|0101><1010| + |1010><0101|) + 
+    For weights (t0, t1, t2), is equivalent to
+        exp(0.5 pi i (t0 (|1001><0110| + |0110><1001|) +
+                      t1 (|0101><1010| + |1010><0101|) +
                       t2 (|0011><1100| + |1100><0011|)))
     """
 
@@ -274,11 +274,12 @@ class CombinedDoubleExcitationGate(cirq.EigenGate,
     def default_decompose(self, qubits):
         a, b, c, d = qubits
 
-        exponents = (
-                self._exponent * (self.weights[0] - self.weights[1] + self.weights[2]) / 4.,
-                self._exponent * (self.weights[0] + self.weights[1] - self.weights[2]) / 4.,
-                self._exponent * (-self.weights[0] + self.weights[1] + self.weights[2]) / 4.,
-                )
+        weights_to_exponents = (self._exponent / 4.) * numpy.array([
+            [1, -1, 1],
+            [1, 1, -1],
+            [-1, 1, 1]
+            ])
+        exponents = weights_to_exponents.dot(self.weights)
 
         basis_change = list(cirq.flatten_op_tree([
             cirq.CNOT(b, a),
