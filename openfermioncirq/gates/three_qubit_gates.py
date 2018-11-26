@@ -12,133 +12,54 @@
 
 """Common gates that target three qubits."""
 
-from typing import Optional, Union
+from typing import Optional
 
-import numpy
+import numpy as np
 
 import cirq
 
-
-class Rot111Gate(cirq.EigenGate,
-                 cirq.CompositeGate,
-                 cirq.InterchangeableQubitsGate):
-    """Phases the |111> state of three qubits by a fixed amount."""
-
-    def __init__(self, *,  # Forces keyword args.
-                 half_turns: Optional[Union[cirq.Symbol, float]]=None,
-                 rads: Optional[float]=None,
-                 degs: Optional[float]=None) -> None:
-        """Initializes the gate.
-
-        At most one angle argument may be specified. If more are specified,
-        the result is considered ambiguous and an error is thrown. If no angle
-        argument is given, the default value of one half turn is used.
-
-        Args:
-            half_turns: Relative phasing of CCZ's eigenstates, in half_turns.
-            rads: Relative phasing of CCZ's eigenstates, in radians.
-            degs: Relative phasing of CCZ's eigenstates, in degrees.
-        """
-        super().__init__(exponent=cirq.chosen_angle_to_half_turns(
-            half_turns=half_turns,
-            rads=rads,
-            degs=degs))
-
-    @property
-    def half_turns(self) -> Union[cirq.Symbol, float]:
-        return self._exponent
-
-    def _eigen_components(self):
-        return [
-            (0, numpy.diag([1, 1, 1, 1, 1, 1, 1, 0])),
-            (1, numpy.diag([0, 0, 0, 0, 0, 0, 0, 1])),
-        ]
-
-    def _canonical_exponent_period(self) -> Optional[float]:
-        return 2
-
-    def _with_exponent(self,
-                       exponent: Union[cirq.Symbol, float]) -> 'Rot111Gate':
-        return Rot111Gate(half_turns=exponent)
-
-    def default_decompose(self, qubits):
-        a, b, c = qubits
-        yield cirq.CZ(b, c)**(0.5 * self.half_turns)
-        yield cirq.CNOT(a, b)
-        yield cirq.CZ(b, c)**(-0.5 * self.half_turns)
-        yield cirq.CNOT(a, b)
-        yield cirq.CZ(a, c)**(0.5 * self.half_turns)
-
-    def _circuit_diagram_info_(self, args: cirq.CircuitDiagramInfoArgs
-                               ) -> cirq.CircuitDiagramInfo:
-        return cirq.CircuitDiagramInfo(
-            wire_symbols=('@', '@', '@'),
-            exponent=self.half_turns)
-
-    def __repr__(self) -> str:
-        if self.half_turns == 1:
-            return 'CCZ'
-        return 'CCZ**{!r}'.format(self.half_turns)
+from openfermioncirq.gates import common_gates
 
 
-class ControlledXXYYGate(cirq.EigenGate, cirq.CompositeGate):
+def rot111(rads: float):
+    """Phases the |111> state of three qubits by e^{i rads}."""
+    return cirq.CCZ**(rads / np.pi)
+
+
+class CXXYYPowGate(cirq.EigenGate,
+                         cirq.ThreeQubitGate):
     """Controlled XX + YY interaction."""
-    def __init__(self, *,  # Forces keyword args.
-                 half_turns: Optional[Union[cirq.Symbol, float]]=None,
-                 rads: Optional[float]=None,
-                 degs: Optional[float]=None,
-                 duration: Optional[float]=None) -> None:
 
-        if len([1 for e in [half_turns, rads, degs, duration]
-                if e is not None]) > 1:
-            raise ValueError('Redundant exponent specification. '
-                             'Use ONE of half_turns, rads, degs, or duration.')
-
-        if duration is not None:
-            exponent = 2 * duration / numpy.pi
-        else:
-            exponent = cirq.value.chosen_angle_to_half_turns(
-                    half_turns=half_turns,
-                    rads=rads,
-                    degs=degs)
-
-        super().__init__(exponent=exponent)
-
-    @property
-    def half_turns(self) -> Union[cirq.Symbol, float]:
-        return self._exponent
+    def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs
+                        ) -> Optional[np.ndarray]:
+        return cirq.apply_unitary(
+            cirq.ControlledGate(common_gates.XXYY**self.exponent),
+            args,
+            default=None)
 
     def _eigen_components(self):
         minus_half_component = cirq.linalg.block_diag(
-            numpy.diag([0, 0, 0, 0, 0]),
-            numpy.array([[0.5, 0.5],
+            np.diag([0, 0, 0, 0, 0]),
+            np.array([[0.5, 0.5],
                          [0.5, 0.5]]),
-            numpy.diag([0]))
+            np.diag([0]))
         plus_half_component = cirq.linalg.block_diag(
-            numpy.diag([0, 0, 0, 0, 0]),
-            numpy.array([[0.5, -0.5],
+            np.diag([0, 0, 0, 0, 0]),
+            np.array([[0.5, -0.5],
                          [-0.5, 0.5]]),
-            numpy.diag([0]))
+            np.diag([0]))
 
-        return [(0, numpy.diag([1, 1, 1, 1, 1, 0, 0, 1])),
+        return [(0, np.diag([1, 1, 1, 1, 1, 0, 0, 1])),
                 (-0.5, minus_half_component),
                 (0.5, plus_half_component)]
 
-    def _canonical_exponent_period(self) -> Optional[float]:
-        return 4
-
-    def _with_exponent(self,
-                       exponent: Union[cirq.Symbol, float]
-                       ) -> 'ControlledXXYYGate':
-        return ControlledXXYYGate(half_turns=exponent)
-
-    def default_decompose(self, qubits):
+    def _decompose_(self, qubits):
         control, a, b = qubits
         yield cirq.CNOT(a, b)
         yield cirq.H(a)
-        yield CCZ(control, a, b)**self.half_turns
+        yield cirq.CCZ(control, a, b)**self.exponent
         # Note: Clifford optimization would merge this CZ into the CCZ decomp.
-        yield cirq.CZ(control, b)**(-self.half_turns / 2)
+        yield cirq.CZ(control, b)**(-self.exponent / 2)
         yield cirq.H(a)
         yield cirq.CNOT(a, b)
 
@@ -146,73 +67,48 @@ class ControlledXXYYGate(cirq.EigenGate, cirq.CompositeGate):
                                ) -> cirq.CircuitDiagramInfo:
         return cirq.CircuitDiagramInfo(
             wire_symbols=('@', 'XXYY', 'XXYY'),
-            exponent=self.half_turns)
+            exponent=self._diagram_exponent(args))
 
     def __repr__(self):
-        if self.half_turns == 1:
+        if self.exponent == 1:
             return 'CXXYY'
-        return 'CXXYY**{!r}'.format(self.half_turns)
+        return 'CXXYY**{!r}'.format(self.exponent)
 
 
-class ControlledYXXYGate(cirq.EigenGate, cirq.CompositeGate):
+class CYXXYPowGate(cirq.EigenGate,
+                         cirq.ThreeQubitGate):
     """Controlled YX - XY interaction."""
 
-    def __init__(self, *,  # Forces keyword args.
-                 half_turns: Optional[Union[cirq.Symbol, float]]=None,
-                 rads: Optional[float]=None,
-                 degs: Optional[float]=None,
-                 duration: Optional[float]=None) -> None:
-
-        if len([1 for e in [half_turns, rads, degs, duration]
-                if e is not None]) > 1:
-            raise ValueError('Redundant exponent specification. '
-                             'Use ONE of half_turns, rads, degs, or duration.')
-
-        if duration is not None:
-            exponent = 2 * duration / numpy.pi
-        else:
-            exponent = cirq.value.chosen_angle_to_half_turns(
-                    half_turns=half_turns,
-                    rads=rads,
-                    degs=degs)
-
-        super().__init__(exponent=exponent)
-
-    @property
-    def half_turns(self) -> Union[cirq.Symbol, float]:
-        return self._exponent
+    def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs
+                        ) -> Optional[np.ndarray]:
+        return cirq.apply_unitary(
+            cirq.ControlledGate(common_gates.YXXY**self.exponent),
+            args,
+            default=None)
 
     def _eigen_components(self):
         minus_half_component = cirq.linalg.block_diag(
-            numpy.diag([0, 0, 0, 0, 0]),
-            numpy.array([[0.5, -0.5j],
+            np.diag([0, 0, 0, 0, 0]),
+            np.array([[0.5, -0.5j],
                          [0.5j, 0.5]]),
-            numpy.diag([0]))
+            np.diag([0]))
         plus_half_component = cirq.linalg.block_diag(
-            numpy.diag([0, 0, 0, 0, 0]),
-            numpy.array([[0.5, 0.5j],
+            np.diag([0, 0, 0, 0, 0]),
+            np.array([[0.5, 0.5j],
                          [-0.5j, 0.5]]),
-            numpy.diag([0]))
+            np.diag([0]))
 
-        return [(0, numpy.diag([1, 1, 1, 1, 1, 0, 0, 1])),
+        return [(0, np.diag([1, 1, 1, 1, 1, 0, 0, 1])),
                 (-0.5, minus_half_component),
                 (0.5, plus_half_component)]
 
-    def _canonical_exponent_period(self) -> Optional[float]:
-        return 4
-
-    def _with_exponent(self,
-                       exponent: Union[cirq.Symbol, float]
-                       ) -> 'ControlledYXXYGate':
-        return ControlledYXXYGate(half_turns=exponent)
-
-    def default_decompose(self, qubits):
+    def _decompose_(self, qubits):
         control, a, b = qubits
         yield cirq.CNOT(a, b)
         yield cirq.X(a)**0.5
-        yield CCZ(control, a, b)**self.half_turns
+        yield cirq.CCZ(control, a, b)**self.exponent
         # Note: Clifford optimization would merge this CZ into the CCZ decomp.
-        yield cirq.CZ(control, b)**(-self.half_turns / 2)
+        yield cirq.CZ(control, b)**(-self.exponent / 2)
         yield cirq.X(a)**-0.5
         yield cirq.CNOT(a, b)
 
@@ -220,14 +116,23 @@ class ControlledYXXYGate(cirq.EigenGate, cirq.CompositeGate):
                                ) -> cirq.CircuitDiagramInfo:
         return cirq.CircuitDiagramInfo(
             wire_symbols=('@', 'YXXY', '#2'),
-            exponent=self.half_turns)
+            exponent=self._diagram_exponent(args))
 
     def __repr__(self):
-        if self.half_turns == 1:
+        if self.exponent == 1:
             return 'CYXXY'
-        return 'CYXXY**{!r}'.format(self.half_turns)
+        return 'CYXXY**{!r}'.format(self.exponent)
 
 
-CCZ = Rot111Gate()
-CXXYY = ControlledXXYYGate()
-CYXXY = ControlledYXXYGate()
+def CRxxyy(rads: float) -> CXXYYPowGate:
+    """Controlled version of ofc.Rxxyy"""
+    return CXXYYPowGate(exponent=2 * rads / np.pi)
+
+
+def CRyxxy(rads: float) -> CYXXYPowGate:
+    """Controlled version of ofc.Ryxxy"""
+    return CYXXYPowGate(exponent=2 * rads / np.pi)
+
+
+CXXYY = CXXYYPowGate()
+CYXXY = CYXXYPowGate()

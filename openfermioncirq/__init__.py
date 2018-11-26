@@ -11,20 +11,27 @@
 # limitations under the License.
 
 from openfermioncirq.gates import (
-    CCZ,
+    CRxxyy,
+    CRyxxy,
     CXXYY,
     CYXXY,
-    ControlledXXYYGate,
-    ControlledYXXYGate,
+    CXXYYPowGate,
+    CYXXYPowGate,
+    CombinedDoubleExcitationGate,
+    DoubleExcitation,
+    DoubleExcitationGate,
     FSWAP,
-    FermionicSwapGate,
-    Rot111Gate,
+    FSwapPowGate,
+    Rxxyy,
+    Ryxxy,
+    Rzz,
+    rot11,
+    rot111,
     XXYY,
-    XXYYGate,
+    XXYYPowGate,
     YXXY,
-    YXXYGate,
-    ZZ,
-    ZZGate)
+    YXXYPowGate,
+)
 
 from openfermioncirq.primitives import (
     prepare_gaussian_state,
@@ -41,6 +48,7 @@ from openfermioncirq.variational import (
     LowRankTrotterAnsatz,
     SplitOperatorTrotterAnsatz,
     SwapNetworkTrotterAnsatz,
+    SwapNetworkTrotterHubbardAnsatz,
     VariationalAnsatz,
     VariationalObjective,
     VariationalStudy)

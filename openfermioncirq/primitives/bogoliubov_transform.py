@@ -23,7 +23,7 @@ from openfermion.ops._givens_rotations import (
         fermionic_gaussian_decomposition,
         givens_decomposition_square)
 
-from openfermioncirq import YXXY
+from openfermioncirq import Ryxxy
 
 
 def bogoliubov_transform(
@@ -162,7 +162,7 @@ def _slater_basis_change(qubits: Sequence[cirq.QubitId],
         circuit_description = list(reversed(decomposition))
         # The initial state is not a computational basis state so the
         # phases left on the diagonal in the decomposition matter
-        yield (cirq.RotZGate(rads=numpy.angle(diagonal[j])).on(qubits[j])
+        yield (cirq.Rz(rads=numpy.angle(diagonal[j])).on(qubits[j])
                for j in range(n_qubits))
     else:
         initially_occupied_orbitals = cast(
@@ -206,7 +206,7 @@ def _gaussian_basis_change(qubits: Sequence[cirq.QubitId],
         if initially_occupied_orbitals is None:
             # The initial state is not a computational basis state so the
             # phases left on the diagonal in the Givens decomposition matter
-            yield (cirq.RotZGate(rads=
+            yield (cirq.Rz(rads=
                        numpy.angle(left_diagonal[j])).on(qubits[j])
                    for j in range(n_qubits))
         circuit_description = list(reversed(decomposition + left_decomposition))
@@ -228,5 +228,5 @@ def _ops_from_givens_rotations_circuit_description(
                 yield cirq.X(qubits[-1])
             else:
                 i, j, theta, phi = cast(Tuple[int, int, float, float], op)
-                yield YXXY(qubits[i], qubits[j]) ** (2 * theta / numpy.pi)
+                yield Ryxxy(theta).on(qubits[i], qubits[j])
                 yield cirq.Z(qubits[j]) ** (phi / numpy.pi)

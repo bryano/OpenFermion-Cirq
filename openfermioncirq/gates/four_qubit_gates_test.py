@@ -38,6 +38,7 @@ def test_state_swap_eigen_component_args():
     with pytest.raises(ValueError):
         state_swap_eigen_component('01', 'ab', 1)
 
+
 @pytest.mark.parametrize('index_pair,n_qubits', [
     ((0, 1), 2),
     ((0, 3), 2),
@@ -56,44 +57,51 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
 
 
 def test_double_excitation_repr():
-    assert repr(DoubleExcitationGate(half_turns=1)) == 'DoubleExcitation'
+    assert repr(DoubleExcitationGate(exponent=1)) == 'DoubleExcitation'
     assert repr(DoubleExcitationGate(
-        half_turns=0.5)) == 'DoubleExcitation**0.5'
+        exponent=0.5)) == 'DoubleExcitation**0.5'
 
 
 def test_double_excitation_init_with_multiple_args_fails():
     with pytest.raises(ValueError):
-        _ = DoubleExcitationGate(half_turns=1.0, duration=numpy.pi/2)
+        _ = DoubleExcitationGate(exponent=1.0, duration=numpy.pi/2)
 
 
 def test_double_excitation_eq():
     eq = cirq.testing.EqualsTester()
 
-    eq.add_equality_group(DoubleExcitationGate(half_turns=1.5),
-                          DoubleExcitationGate(half_turns=-0.5),
+    eq.add_equality_group(DoubleExcitationGate(exponent=1.5),
+                          DoubleExcitationGate(exponent=-0.5),
                           DoubleExcitationGate(rads=-0.5 * numpy.pi),
                           DoubleExcitationGate(degs=-90),
                           DoubleExcitationGate(duration=-0.5 * numpy.pi / 2))
 
-    eq.add_equality_group(DoubleExcitationGate(half_turns=0.5),
-                          DoubleExcitationGate(half_turns=-1.5),
+    eq.add_equality_group(DoubleExcitationGate(exponent=0.5),
+                          DoubleExcitationGate(exponent=-1.5),
                           DoubleExcitationGate(rads=0.5 * numpy.pi),
                           DoubleExcitationGate(degs=90),
                           DoubleExcitationGate(duration=-1.5 * numpy.pi / 2))
 
-    eq.make_equality_group(lambda: DoubleExcitationGate(half_turns=0.0))
-    eq.make_equality_group(lambda: DoubleExcitationGate(half_turns=0.75))
+    eq.make_equality_group(lambda: DoubleExcitationGate(exponent=0.0))
+    eq.make_equality_group(lambda: DoubleExcitationGate(exponent=0.75))
 
 
-@pytest.mark.parametrize('half_turns', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
-def test_double_excitation_decompose(half_turns):
-    gate = DoubleExcitation ** half_turns
-    qubits = cirq.LineQubit.range(4)
-    circuit = cirq.Circuit.from_ops(gate.default_decompose(qubits))
-    matrix = circuit.to_unitary_matrix(qubit_order=qubits)
+@pytest.mark.parametrize('exponent', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
+def test_double_excitation_decompose(exponent):
+    cirq.testing.assert_decompose_is_consistent_with_unitary(
+            DoubleExcitation**exponent)
 
-    cirq.testing.assert_allclose_up_to_global_phase(
-        matrix, cirq.unitary(gate), atol=1e-7)
+
+def test_apply_unitary():
+    cirq.testing.assert_has_consistent_apply_unitary_for_various_exponents(
+        DoubleExcitation,
+        exponents=[1, -0.5, 0.5, 0.25, -0.25, 0.1, cirq.Symbol('s')],
+        qubit_count=4)
+
+    cirq.testing.assert_has_consistent_apply_unitary_for_various_exponents(
+        CombinedDoubleExcitationGate(weights=(0.2, 0.3, 0.4)),
+        exponents=[1, -0.5, 0.5, 0.25, -0.25, 0.1, cirq.Symbol('s')],
+        qubit_count=4)
 
 
 @pytest.mark.parametrize('weights', numpy.random.rand(10, 3))
@@ -101,16 +109,16 @@ def test_weights_and_exponent(weights):
     exponents = numpy.linspace(-1, 1, 8)
     gates = tuple(
             CombinedDoubleExcitationGate(weights / exponent,
-                                         half_turns=exponent)
+                                         exponent=exponent)
             for exponent in exponents)
 
     cirq.testing.EqualsTester().add_equality_group(*gates)
 
     for i, (gate, exponent) in enumerate(zip(gates, exponents)):
-        assert gate.half_turns == 1
+        assert gate.exponent == 1
         new_exponent = exponents[-i]
         new_gate = gate._with_exponent(new_exponent)
-        assert new_gate.half_turns == new_exponent
+        assert new_gate.exponent == new_exponent
 
 
 double_excitation_simulator_test_cases = [
@@ -230,19 +238,17 @@ combined_double_excitation_simulator_test_cases = [
          5e-6),
         ]
 @pytest.mark.parametrize(
-    'gate, half_turns, initial_state, correct_state, atol',
+    'gate, exponent, initial_state, correct_state, atol',
     double_excitation_simulator_test_cases +
     combined_double_excitation_simulator_test_cases)
 def test_four_qubit_rotation_gates_on_simulator(
-        gate, half_turns, initial_state, correct_state, atol):
+        gate, exponent, initial_state, correct_state, atol):
 
-    simulator = cirq.google.XmonSimulator()
     a, b, c, d = cirq.LineQubit.range(4)
-    circuit = cirq.Circuit.from_ops(gate(a, b, c, d)**half_turns)
-    initial_state = initial_state.astype(numpy.complex64)
-    result = simulator.simulate(circuit, initial_state=initial_state)
+    circuit = cirq.Circuit.from_ops(gate(a, b, c, d)**exponent)
+    result = circuit.apply_unitary_effect_to_state(initial_state)
     cirq.testing.assert_allclose_up_to_global_phase(
-        result.final_state, correct_state, atol=atol)
+        result, correct_state, atol=atol)
 
 
 def test_double_excitation_gate_text_diagrams():
@@ -253,7 +259,7 @@ def test_double_excitation_gate_text_diagrams():
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, b, c, d))
-    assert circuit.to_text_diagram().strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ───⇅───
       │
 b: ───⇅───
@@ -261,11 +267,11 @@ b: ───⇅───
 c: ───⇵───
       │
 d: ───⇵───
-""".strip()
+""")
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, b, c, d)**-0.5)
-    assert circuit.to_text_diagram().strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ───⇅────────
       │
 b: ───⇅────────
@@ -273,11 +279,11 @@ b: ───⇅────────
 c: ───⇵────────
       │
 d: ───⇵^-0.5───
-""".strip()
+""")
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, c, b, d)**0.2)
-    assert circuit.to_text_diagram().strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ───⇅───────
       │
 b: ───⇵───────
@@ -285,11 +291,11 @@ b: ───⇵───────
 c: ───⇅───────
       │
 d: ───⇵^0.2───
-""".strip()
+""")
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(d, b, a, c)**0.7)
-    assert circuit.to_text_diagram().strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ───⇵───────
       │
 b: ───⇅───────
@@ -297,11 +303,11 @@ b: ───⇅───────
 c: ───⇵───────
       │
 d: ───⇅^0.7───
-""".strip()
+""")
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(d, b, a, c)**2.3)
-    assert circuit.to_text_diagram().strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ───⇵───────
       │
 b: ───⇅───────
@@ -309,7 +315,7 @@ b: ───⇅───────
 c: ───⇵───────
       │
 d: ───⇅^0.3───
-""".strip()
+""")
 
 
 def test_double_excitation_gate_text_diagrams_no_unicode():
@@ -320,7 +326,7 @@ def test_double_excitation_gate_text_diagrams_no_unicode():
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, b, c, d))
-    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ---/\ \/---
       |
 b: ---/\ \/---
@@ -328,11 +334,11 @@ b: ---/\ \/---
 c: ---\/ /\---
       |
 d: ---\/ /\---
-""".strip()
+""", use_unicode_characters=False)
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, b, c, d)**-0.5)
-    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ---/\ \/--------
       |
 b: ---/\ \/--------
@@ -340,11 +346,11 @@ b: ---/\ \/--------
 c: ---\/ /\--------
       |
 d: ---\/ /\^-0.5---
-""".strip()
+""", use_unicode_characters=False)
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(a, c, b, d)**0.2)
-    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ---/\ \/-------
       |
 b: ---\/ /\-------
@@ -352,11 +358,11 @@ b: ---\/ /\-------
 c: ---/\ \/-------
       |
 d: ---\/ /\^0.2---
-""".strip()
+""", use_unicode_characters=False)
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(d, b, a, c)**0.7)
-    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ---\/ /\-------
       |
 b: ---/\ \/-------
@@ -364,11 +370,11 @@ b: ---/\ \/-------
 c: ---\/ /\-------
       |
 d: ---/\ \/^0.7---
-""".strip()
+""", use_unicode_characters=False)
 
     circuit = cirq.Circuit.from_ops(
         DoubleExcitation(d, b, a, c)**2.3)
-    assert circuit.to_text_diagram(use_unicode_characters=False).strip() == """
+    cirq.testing.assert_has_diagram(circuit, """
 a: ---\/ /\-------
       |
 b: ---/\ \/-------
@@ -376,18 +382,18 @@ b: ---/\ \/-------
 c: ---\/ /\-------
       |
 d: ---/\ \/^0.3---
-""".strip()
+""", use_unicode_characters=False)
 
 
-@pytest.mark.parametrize('half_turns', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
-def test_double_excitation_matches_fermionic_evolution(half_turns):
-    gate = DoubleExcitation ** half_turns
+@pytest.mark.parametrize('exponent', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
+def test_double_excitation_matches_fermionic_evolution(exponent):
+    gate = DoubleExcitation ** exponent
 
     op = openfermion.FermionOperator('3^ 2^ 1 0')
     op += openfermion.hermitian_conjugated(op)
     matrix_op = openfermion.get_sparse_operator(op)
 
-    time_evol_op = scipy.linalg.expm(-1j * matrix_op * half_turns * numpy.pi)
+    time_evol_op = scipy.linalg.expm(-1j * matrix_op * exponent * numpy.pi)
     time_evol_op = time_evol_op.todense()
 
     cirq.testing.assert_allclose_up_to_global_phase(
@@ -409,16 +415,16 @@ def test_combined_double_excitation_repr():
 def test_combined_double_excitation_init_with_multiple_args_fails():
     with pytest.raises(ValueError):
         _ = CombinedDoubleExcitationGate(
-                (1,1,1), half_turns=1.0, duration=numpy.pi/2)
+                (1,1,1), exponent=1.0, duration=numpy.pi/2)
 
 
 def test_combined_double_excitation_eq():
     eq = cirq.testing.EqualsTester()
 
     eq.add_equality_group(
-            CombinedDoubleExcitationGate((1.2, 0.4, -0.4), half_turns=0.5),
-            CombinedDoubleExcitationGate((0.3, 0.1, -0.1), half_turns=2),
-            CombinedDoubleExcitationGate((-0.6, -0.2, 0.2), half_turns=-1),
+            CombinedDoubleExcitationGate((1.2, 0.4, -0.4), exponent=0.5),
+            CombinedDoubleExcitationGate((0.3, 0.1, -0.1), exponent=2),
+            CombinedDoubleExcitationGate((-0.6, -0.2, 0.2), exponent=-1),
             CombinedDoubleExcitationGate((0.6, 0.2, 3.8)),
             CombinedDoubleExcitationGate(
                 (1.2, 0.4, -0.4), rads=0.5 * numpy.pi),
@@ -428,8 +434,8 @@ def test_combined_double_excitation_eq():
             )
 
     eq.add_equality_group(
-            CombinedDoubleExcitationGate((-0.6, 0.0, 0.3), half_turns=0.5),
-            CombinedDoubleExcitationGate((0.2, -0.0, -0.1), half_turns=-1.5),
+            CombinedDoubleExcitationGate((-0.6, 0.0, 0.3), exponent=0.5),
+            CombinedDoubleExcitationGate((0.2, -0.0, -0.1), exponent=-1.5),
             CombinedDoubleExcitationGate((-0.6, 0.0, 0.3),
                                          rads=0.5 * numpy.pi),
             CombinedDoubleExcitationGate((-0.6, 0.0, 0.3), degs=90),
@@ -439,10 +445,10 @@ def test_combined_double_excitation_eq():
 
     eq.make_equality_group(
             lambda: CombinedDoubleExcitationGate(
-                (0.1, -0.3, 0.0), half_turns=0.0))
+                (0.1, -0.3, 0.0), exponent=0.0))
     eq.make_equality_group(
             lambda: CombinedDoubleExcitationGate(
-                (1., -1., 0.5), half_turns=0.75))
+                (1., -1., 0.5), exponent=0.75))
 
 
 def test_combined_double_excitation_gate_text_diagram():
@@ -490,10 +496,5 @@ test_weights = [1.0, 0.5, 0.25, 0.1, 0.0, -0.5]
         numpy.random.rand(10, 3)
         ))
 def test_combined_double_excitation_decompose(weights):
-    gate = CombinedDoubleExcitationGate(weights)
-    qubits = cirq.LineQubit.range(4)
-    circuit = cirq.Circuit.from_ops(gate.default_decompose(qubits))
-    circuit_matrix = circuit.to_unitary_matrix(qubit_order=qubits)
-    eigen_matrix = cirq.unitary(gate)
-    cirq.testing.assert_allclose_up_to_global_phase(
-        circuit_matrix, eigen_matrix, rtol=1e-5, atol=1e-5)
+    cirq.testing.assert_decompose_is_consistent_with_unitary(
+            CombinedDoubleExcitationGate(weights))

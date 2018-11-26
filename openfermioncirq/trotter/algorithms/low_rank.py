@@ -20,13 +20,14 @@ import cirq
 import openfermion
 
 from openfermioncirq import (
-        Rot111Gate,
-        bogoliubov_transform,
-        swap_network)
+    rot11,
+    rot111,
+    bogoliubov_transform,
+    swap_network)
 from openfermioncirq.trotter.trotter_algorithm import (
-        Hamiltonian,
-        TrotterStep,
-        TrotterAlgorithm)
+    Hamiltonian,
+    TrotterStep,
+    TrotterAlgorithm)
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -156,7 +157,7 @@ class AsymmetricLowRankTrotterStep(LowRankTrotterStep):
 
         # Simulate the one-body terms.
         for p in range(n_qubits):
-            yield cirq.RotZGate(rads=
+            yield cirq.Rz(rads=
                     -self.one_body_energies[p] * time
                     ).on(qubits[p])
 
@@ -178,13 +179,13 @@ class AsymmetricLowRankTrotterStep(LowRankTrotterStep):
             # Simulate the off-diagonal two-body terms.
             yield swap_network(
                     qubits,
-                    lambda p, q, a, b: cirq.Rot11Gate(rads=
+                    lambda p, q, a, b: rot11(rads=
                         -2 * two_body_coefficients[p, q] * time).on(a, b))
             qubits = qubits[::-1]
 
             # Simulate the diagonal two-body terms.
             for p in range(n_qubits):
-                yield cirq.RotZGate(rads=
+                yield cirq.Rz(rads=
                         -two_body_coefficients[p, p] * time
                         ).on(qubits[p])
 
@@ -235,7 +236,7 @@ class ControlledAsymmetricLowRankTrotterStep(LowRankTrotterStep):
 
         # Simulate the one-body terms.
         for p in range(n_qubits):
-            yield cirq.Rot11Gate(rads=
+            yield rot11(rads=
                     -self.one_body_energies[p] * time
                     ).on(control_qubit, qubits[p])
 
@@ -257,13 +258,13 @@ class ControlledAsymmetricLowRankTrotterStep(LowRankTrotterStep):
             # Simulate the off-diagonal two-body terms.
             yield swap_network(
                     qubits,
-                    lambda p, q, a, b: Rot111Gate(rads=
+                    lambda p, q, a, b: rot111(
                         -2 * two_body_coefficients[p, q] * time).on(
                             control_qubit, a, b))
             qubits = qubits[::-1]
 
             # Simulate the diagonal two-body terms.
-            yield (cirq.Rot11Gate(rads=
+            yield (rot11(rads=
                        -two_body_coefficients[k, k] * time).on(
                            control_qubit, qubits[k])
                    for k in range(n_qubits))
@@ -275,7 +276,7 @@ class ControlledAsymmetricLowRankTrotterStep(LowRankTrotterStep):
         yield bogoliubov_transform(qubits, prior_basis_matrix)
 
         # Apply phase from constant term
-        yield cirq.RotZGate(rads=
+        yield cirq.Rz(rads=
                 -self.hamiltonian.constant * time).on(control_qubit)
 
     def step_qubit_permutation(self,

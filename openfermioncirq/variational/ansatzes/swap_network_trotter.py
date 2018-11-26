@@ -21,7 +21,7 @@ import numpy
 import cirq
 import openfermion
 
-from openfermioncirq import XXYYGate, YXXYGate, swap_network
+from openfermioncirq import XXYYPowGate, YXXYPowGate, swap_network
 from openfermioncirq.variational.ansatz import VariationalAnsatz
 from openfermioncirq.variational.letter_with_subscripts import (
         LetterWithSubscripts)
@@ -231,11 +231,11 @@ class SwapNetworkTrotterAnsatz(VariationalAnsatz):
                 w_symbol = LetterWithSubscripts('W', p, q, i)
                 v_symbol = LetterWithSubscripts('V', p, q, i)
                 if t_symbol in param_set:
-                    yield XXYYGate(half_turns=t_symbol).on(a, b)
+                    yield XXYYPowGate(exponent=t_symbol).on(a, b)
                 if w_symbol in param_set:
-                    yield YXXYGate(half_turns=w_symbol).on(a, b)
+                    yield YXXYPowGate(exponent=w_symbol).on(a, b)
                 if v_symbol in param_set:
-                    yield cirq.Rot11Gate(half_turns=v_symbol).on(a, b)
+                    yield cirq.CZPowGate(exponent=v_symbol).on(a, b)
             yield swap_network(
                     qubits, one_and_two_body_interaction, fermionic=True)
             qubits = qubits[::-1]
@@ -244,7 +244,7 @@ class SwapNetworkTrotterAnsatz(VariationalAnsatz):
             for p in range(len(qubits)):
                 u_symbol = LetterWithSubscripts('U', p, i)
                 if u_symbol in param_set:
-                    yield cirq.RotZGate(half_turns=u_symbol).on(qubits[p])
+                    yield cirq.ZPowGate(exponent=u_symbol).on(qubits[p])
 
             # Apply one- and two-body interactions again. This time, reorder
             # them so that the entire iteration is symmetric
@@ -254,11 +254,11 @@ class SwapNetworkTrotterAnsatz(VariationalAnsatz):
                 w_symbol = LetterWithSubscripts('W', p, q, i)
                 v_symbol = LetterWithSubscripts('V', p, q, i)
                 if v_symbol in param_set:
-                    yield cirq.Rot11Gate(half_turns=v_symbol).on(a, b)
+                    yield cirq.CZPowGate(exponent=v_symbol).on(a, b)
                 if w_symbol in param_set:
-                    yield YXXYGate(half_turns=w_symbol).on(a, b)
+                    yield YXXYPowGate(exponent=w_symbol).on(a, b)
                 if t_symbol in param_set:
-                    yield XXYYGate(half_turns=t_symbol).on(a, b)
+                    yield XXYYPowGate(exponent=t_symbol).on(a, b)
             yield swap_network(
                     qubits, one_and_two_body_interaction_reversed_order,
                     fermionic=True, offset=True)
