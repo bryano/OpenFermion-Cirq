@@ -27,10 +27,11 @@ test_objective_noisy = ExampleVariationalObjectiveNoisy()
 
 def test_variational_objective_value():
     simulator = cirq.google.XmonSimulator()
-    qubits = cirq.LineQubit.range(4)
+    n_qubits = 4
+    qubits = cirq.LineQubit.range(n_qubits)
     circuit = cirq.Circuit.from_ops(
             cirq.X.on_each(qubits[:3]),
-            cirq.MeasurementGate('all').on(*qubits))
+            cirq.MeasurementGate(n_qubits, 'all').on(*qubits))
     result = simulator.simulate(circuit)
 
     numpy.testing.assert_allclose(test_objective.value(result), 3)

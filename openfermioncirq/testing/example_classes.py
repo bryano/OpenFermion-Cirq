@@ -124,7 +124,7 @@ class ExampleAnsatz(VariationalAnsatz):
         yield cirq.CZ(a, b)
         yield cirq.XPowGate(exponent=cirq.Symbol('theta0')).on(a)
         yield cirq.XPowGate(exponent=cirq.Symbol('theta1')).on(b)
-        yield cirq.MeasurementGate('all').on(a, b)
+        yield cirq.MeasurementGate(2, 'all').on(a, b)
 
 
 class ExampleVariationalObjective(VariationalObjective):

@@ -56,6 +56,14 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
         assert numpy.allclose(actual_component, expected_component)
 
 
+def test_double_excitation_num_qubit():
+    assert DoubleExcitationGate().num_qubits() == 2
+
+
+def test_combined_double_excitation_num_qubit():
+    assert CombinedDoubleExcitationGate().num_qubits() == 2
+
+
 def test_double_excitation_repr():
     assert repr(DoubleExcitationGate(exponent=1)) == 'DoubleExcitation'
     assert repr(DoubleExcitationGate(
