@@ -104,7 +104,7 @@ class DoubleExcitationGate(cirq.EigenGate):
         super().__init__(exponent=exponent)
 
     def num_qubits(self):
-        return 2
+        return 4
 
     def _eigen_components(self):
         minus_one_component = np.zeros((16, 16))
@@ -249,7 +249,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
             self.absorb_exponent_into_weights()
 
     def num_qubits(self):
-        return 2
+        return 4
 
     def _eigen_components(self):
         # projector onto subspace spanned by basis states with
