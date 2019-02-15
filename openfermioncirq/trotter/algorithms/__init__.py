@@ -12,6 +12,9 @@
 
 """Algorithms for performing Trotter steps."""
 
+from openfermioncirq.trotter.algorithms.general_swap_network import (
+    GeneralSwapNetworkTrotterAlgorithm)
+
 from openfermioncirq.trotter.algorithms.linear_swap_network import (
     LINEAR_SWAP_NETWORK,
     LinearSwapNetworkTrotterAlgorithm)
