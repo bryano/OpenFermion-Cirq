@@ -17,11 +17,15 @@ import cirq
 
 class LetterWithSubscripts(cirq.Symbol):
 
+    def __new__(cls,
+                letter: str,
+                *subscripts: Union[str, int]):
+        name = letter + ''.join('_{}'.format(subscript)
+                                for subscript in subscripts)
+        return super().__new__(cls, name)
+
     def __init__(self,
                  letter: str,
                  *subscripts: Union[str, int]) -> None:
         self.letter = letter
         self.subscripts = subscripts
-        name = letter + ''.join('_{}'.format(subscript)
-                                for subscript in subscripts)
-        super().__init__(name)
