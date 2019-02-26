@@ -3,5 +3,5 @@ pandas
 scipy
 
 # NOTE: switch to non-dev versions when releasing!
-cirq==0.4.0
+git+https://github.com/quantumlib/Cirq.git@master#egg=cirq
 openfermion==0.9.0
