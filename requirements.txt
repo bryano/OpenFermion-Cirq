@@ -1,6 +1,7 @@
 numpy
 pandas
 scipy
+sympy
 
 # NOTE: switch to non-dev versions when releasing!
 git+https://github.com/quantumlib/Cirq.git@master#egg=cirq

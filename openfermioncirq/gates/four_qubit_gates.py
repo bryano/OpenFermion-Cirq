@@ -16,6 +16,7 @@
 from typing import Optional, Union, Tuple
 
 import numpy as np
+import sympy
 
 import cirq
 
@@ -70,7 +71,7 @@ class DoubleExcitationGate(cirq.EigenGate):
     """Evolve under -|0011><1100| + h.c. for some time."""
 
     def __init__(self, *,  # Forces keyword args.
-                 exponent: Optional[Union[cirq.Symbol, float]]=None,
+                 exponent: Optional[Union[sympy.Symbol, float]]=None,
                  rads: Optional[float]=None,
                  degs: Optional[float]=None,
                  duration: Optional[float]=None) -> None:
@@ -133,7 +134,7 @@ class DoubleExcitationGate(cirq.EigenGate):
                                            out=args.available_buffer)
 
     def _with_exponent(self,
-                       exponent: Union[cirq.Symbol, float]
+                       exponent: Union[sympy.Symbol, float]
                        ) -> 'DoubleExcitationGate':
         return DoubleExcitationGate(exponent=exponent)
 
@@ -206,7 +207,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
                  weights: Tuple[float, float, float]=(1, 1, 1),
                  absorb_exponent: bool=True,
                  *,  # Forces keyword args.
-                 exponent: Optional[Union[cirq.Symbol, float]]=None,
+                 exponent: Optional[Union[sympy.Symbol, float]]=None,
                  rads: Optional[float]=None,
                  degs: Optional[float]=None,
                  duration: Optional[float]=None
@@ -270,7 +271,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
         return ((0, zero_component),) + plus_minus_components
 
     def _with_exponent(self,
-                       exponent: Union[cirq.Symbol, float]
+                       exponent: Union[sympy.Symbol, float]
                        ) -> 'CombinedDoubleExcitationGate':
         gate = CombinedDoubleExcitationGate(self.weights)
         gate._exponent = exponent

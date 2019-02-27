@@ -12,10 +12,10 @@
 
 from typing import Union
 
-import cirq
+import sympy
 
 
-class LetterWithSubscripts(cirq.Symbol):
+class LetterWithSubscripts(sympy.Symbol):
 
     def __new__(cls,
                 letter: str,
