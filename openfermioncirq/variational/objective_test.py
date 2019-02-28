@@ -30,8 +30,8 @@ def test_variational_objective_value():
     n_qubits = 4
     qubits = cirq.LineQubit.range(n_qubits)
     circuit = cirq.Circuit.from_ops(
-            cirq.X.on_each(qubits[:3]),
-            cirq.MeasurementGate(n_qubits, 'all').on(*qubits))
+            cirq.X.on_each(*qubits[:3]),
+            cirq.measure(*qubits, key='all'))
     result = simulator.simulate(circuit)
 
     numpy.testing.assert_allclose(test_objective.value(result), 3)

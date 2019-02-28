@@ -10,12 +10,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Union
+from typing import Union, List
 
-import cirq
+import sympy
 
 
-class LetterWithSubscripts(cirq.Symbol):
+def _name(letter: str, *subscripts: Union[str, int]) -> str:
+    return letter + ''.join('_{}'.format(subscript)
+                            for subscript in subscripts)
+
+
+class LetterWithSubscripts(sympy.Symbol):
+
+    def __new__(cls, letter: str, *subscripts: Union[str, int]):
+        return super().__new__(cls, _name(letter, *subscripts))
 
     def __new__(cls,
                 letter: str,
@@ -29,3 +37,28 @@ class LetterWithSubscripts(cirq.Symbol):
                  *subscripts: Union[str, int]) -> None:
         self.letter = letter
         self.subscripts = subscripts
+        super().__init__()
+
+    def __eq__(self, other):
+        if not isinstance(other, sympy.Symbol):
+            return NotImplemented
+        return str(self) == str(other)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash(sympy.Symbol(str(self)))
+
+    def __repr__(self):
+        return (
+            'ofc.variational.letter_with_subscripts.'
+            'LetterWithSubscripts({!r}, {})'.format(
+                self.letter,
+                ', '.join(str(e) for e in self.subscripts)))
+
+    def _subs(self, old, new, **hints):
+        # HACK: work around sympy not recognizing child classes as symbols.
+        if old == self:
+            return new
+        return super()._subs(old, new, **hints)
