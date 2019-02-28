@@ -25,13 +25,6 @@ class LetterWithSubscripts(sympy.Symbol):
     def __new__(cls, letter: str, *subscripts: Union[str, int]):
         return super().__new__(cls, _name(letter, *subscripts))
 
-    def __new__(cls,
-                letter: str,
-                *subscripts: Union[str, int]):
-        name = letter + ''.join('_{}'.format(subscript)
-                                for subscript in subscripts)
-        return super().__new__(cls, name)
-
     def __init__(self,
                  letter: str,
                  *subscripts: Union[str, int]) -> None:
