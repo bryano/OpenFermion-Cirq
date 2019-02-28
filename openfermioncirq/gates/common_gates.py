@@ -12,7 +12,7 @@
 
 """Gates that are commonly used for quantum simulation of fermions."""
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -253,3 +253,49 @@ def rot11(rads: float):
 FSWAP = FSwapPowGate()
 XXYY = XXYYPowGate()
 YXXY = YXXYPowGate()
+
+class CombinedSwapAndZ(
+        cirq.EigenGate,
+        cirq.InterchangeableQubitsGate,
+        cirq.TwoQubitGate):
+    """w0 * (XX + YY) + w1 * |11><11| interaction.
+
+    Equivalent to 
+    """
+
+    def __init__(self,
+                 weights: Tuple[float, float]=(1, 1),
+                 **kwargs) -> None:
+
+        assert len(weights) == 2
+        self.weights = weights
+
+        super().__init__(**kwargs)
+
+    def num_qubits(self):
+        return 2
+
+    def _decompose_(self, qubits):
+        yield XXYYPowGate(exponent=self.weights[0] * self.exponent)(*qubits)
+        yield cirq.CZPowGate(exponent=self.weights[1] * self.exponent)(*qubits)
+
+    def _eigen_components(self):
+        return [
+            (0, np.diag([1, 0, 0, 0])),
+            (-0.5, np.array([[0, 0, 0, 0],
+                             [0, 0.5, 0.5, 0],
+                             [0, 0.5, 0.5, 0],
+                             [0, 0, 0, 0]])),
+            (+0.5, np.array([[0, 0, 0, 0],
+                             [0, 0.5, -0.5, 0],
+                             [0, -0.5, 0.5, 0],
+                             [0, 0, 0, 0]])),
+            (1, np.diag([0, 0, 0, 1])),
+        ]
+
+    def __repr__(self):
+        exponent_str = ('' if self.exponent == 1 else
+                ', exponent=' + cirq._compat.proper_repr(self.exponent))
+        return ('ofc.CombinedSwapAndZ(({}){})'.format(
+                ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
+                exponent_str))
