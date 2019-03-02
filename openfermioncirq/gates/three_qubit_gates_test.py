@@ -180,3 +180,8 @@ b: ───XXYY────────YXXY──────
       │           │
 c: ───XXYY^-0.5───#2^-0.5───
 """)
+
+
+def test_combined_cxxyy():
+    ofc.testing.assert_implements_consistent_protocols(
+        ofc.CombinedCXXYYPowGate())

@@ -32,6 +32,7 @@ from openfermioncirq.gates import (
     YXXY,
     YXXYPowGate,
     CombinedSwapAndZ,
+    CombinedCXXYYPowGate
 )
 
 from openfermioncirq.primitives import (
