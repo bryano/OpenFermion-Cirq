@@ -178,8 +178,8 @@ class DoubleExcitationGate(cirq.EigenGate):
         if args.use_unicode_characters:
             wire_symbols = ('⇅', '⇅', '⇵', '⇵')
         else:
-            wire_symbols = ('/\\ \/',
-                            '/\\ \/',
+            wire_symbols = (r'/\ \/',
+                            r'/\ \/',
                             '\/ /\\',
                             '\/ /\\')
         return cirq.CircuitDiagramInfo(
@@ -371,6 +371,10 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
     def _value_equality_values_(self):
         return tuple(cirq.PeriodicValue(w * self._exponent, 4)
                      for w in self.weights)
+
+    def _is_parameterized_(self) -> bool:
+        return any(isinstance(v, sympy.Basic) or cirq.is_parameterized(v)
+                   for v in self._value_equality_values_())
 
     def __repr__(self):
         return (
