@@ -15,10 +15,10 @@
 from typing import Optional, Tuple
 
 import numpy as np
-import sympy
 
 import cirq
 from cirq._compat import proper_repr
+import sympy
 
 from openfermioncirq.gates import common_gates
 
@@ -186,8 +186,11 @@ class CombinedCXXYYPowGate(
                      for w in self.weights)
 
     def _is_parameterized_(self) -> bool:
-        return any(isinstance(v, sympy.Basic) or cirq.is_parameterized(v)
-                   for v in self._value_equality_values_())
+        return any(isinstance(v, sympy.Basic) or
+                (isinstance(v, cirq.PeriodicValue) and
+                    any(isinstance(vv, sympy.Basic)
+                        for vv in (v.value, v.period)))
+                for v in self._value_equality_values_())
 
     def __repr__(self):
         return (

@@ -373,8 +373,11 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
                      for w in self.weights)
 
     def _is_parameterized_(self) -> bool:
-        return any(isinstance(v, sympy.Basic) or cirq.is_parameterized(v)
-                   for v in self._value_equality_values_())
+        return any(isinstance(v, sympy.Basic) or
+                (isinstance(v, cirq.PeriodicValue) and
+                    any(isinstance(vv, sympy.Basic)
+                        for vv in (v.value, v.period)))
+                for v in self._value_equality_values_())
 
     def __repr__(self):
         return (
