@@ -260,7 +260,7 @@ class CombinedSwapAndZ(
         cirq.TwoQubitGate):
     """w0 * (XX + YY) + w1 * |11><11| interaction.
 
-    Equivalent to 
+    Equivalent to XXYYPowGate and CZ (in either order).
     """
 
     def __init__(self,

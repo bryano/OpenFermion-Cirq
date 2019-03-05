@@ -10,6 +10,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import itertools
+
 import numpy as np
 import pytest
 import sympy
@@ -183,5 +185,23 @@ c: ───XXYY^-0.5───#2^-0.5───
 
 
 def test_combined_cxxyy():
-    ofc.testing.assert_implements_consistent_protocols(
-        ofc.CombinedCXXYYPowGate())
+    ofc.testing.assert_eigengate_implements_consistent_protocols(
+        ofc.CombinedCXXYYPowGate)
+
+@pytest.mark.parametrize('exponent,control',
+    itertools.product(
+        [0, 1, -1, 0.25, -0.5, 0.1],
+        [0, 1, 2]))
+def test_combined_cxxyy_consistency(exponent, control):
+    weights = tuple(np.eye(1, 3, control)[0])
+    general_gate  = ofc.CombinedCXXYYPowGate(weights, exponent=exponent)
+    general_unitary = cirq.unitary(general_gate)
+
+    indices = np.dot(
+            list(itertools.product((0, 1), repeat=3)),
+            (2 ** np.roll(np.arange(3), -control))[::-1])
+    special_gate = ofc.CXXYYPowGate(exponent=exponent)
+    special_unitary = (
+            cirq.unitary(special_gate)[indices[:, np.newaxis], indices])
+
+    assert np.allclose(general_unitary, special_unitary)

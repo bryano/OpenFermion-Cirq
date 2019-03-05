@@ -15,8 +15,10 @@
 from typing import Optional, Tuple
 
 import numpy as np
+import sympy
 
 import cirq
+from cirq._compat import proper_repr
 
 from openfermioncirq.gates import common_gates
 
@@ -144,29 +146,32 @@ class CombinedCXXYYPowGate(
         cirq.ThreeQubitGate):
     """w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
-    With weights (w0, w1, w2) and exponent t, this gate's matrix is defined as follows:
+    With weights (w0, w1, w2) and exponent t, this gate's matrix is defined as
+    follows:
         exp(-i π 0.5 t (w0 * (|110><101| + |101><110|) +
                         w1 * (|110><011| + |011><110|) +
                         w2 * (|101><011| + |011><101|)))
 
-    Args: TODO
+    Args:
+        weights: The weights of the terms in the Hamiltonian.
     """
 
     def __init__(self,
-                 weights: Tuple[float, float]=(1, 1, 1),
+                 weights: Tuple[float, float, float]=(1., 1., 1.),
                  **kwargs) -> None:
 
         assert len(weights) == 3
         self.weights = weights
 
-        super().__init__()
-    
+        super().__init__(**kwargs)
+
     def _eigen_components(self):
         components = [(0, np.diag([1, 1, 1, 0, 1, 0, 0, 1]))]
         nontrivial_part = np.zeros((3, 3))
-        for ij, w in zip([(1, 2), (0, 2), (0, 2)], self.weights):
+        for ij, w in zip([(1, 2), (0, 2), (0, 1)], self.weights):
             nontrivial_part[ij] = nontrivial_part[ij[::-1]] = w
         eig_vals, eig_vecs = np.linalg.eigh(nontrivial_part)
+        print(nontrivial_part)
         for eig_val, eig_vec in zip(eig_vals, eig_vecs.T):
             exp_factor = -0.5 * eig_val
             proj = np.zeros((8, 8))
@@ -180,11 +185,14 @@ class CombinedCXXYYPowGate(
         return tuple(cirq.PeriodicValue(w * self.exponent, 4)
                      for w in self.weights)
 
+    def _is_parameterized_(self) -> bool:
+        return any(isinstance(v, sympy.Basic) or cirq.is_parameterized(v)
+                   for v in self._value_equality_values_())
+
     def __repr__(self):
         return (
-            'ofc.CombinedCXXYYPowGate(' + 
-            ('' if self.weights == (1, 1, 1) else
-             '({})'.format(' ,'.join(proper_repr(w) for w in self.weights))) +
-            ('' if self.exponent == 1 else 
+            'ofc.CombinedCXXYYPowGate(' +
+            '({})'.format(' ,'.join(proper_repr(w) for w in self.weights)) +
+            ('' if self.exponent == 1 else
              (', exponent=' + proper_repr(self.exponent))) +
             ')')
