@@ -261,6 +261,10 @@ class CombinedSwapAndZ(
     """w0 * (XX + YY) + w1 * |11><11| interaction.
 
     Equivalent to XXYYPowGate and CZ (in either order).
+
+    With exponent e and global_shift s, the unitary is
+
+    exp(i * pi * e (s I - (w0 (|01><10| + |10><01|) - w1 |11><11|))).
     """
 
     def __init__(self,
@@ -276,17 +280,17 @@ class CombinedSwapAndZ(
         return 2
 
     def _decompose_(self, qubits):
-        yield XXYYPowGate(exponent=self.weights[0] * self.exponent)(*qubits)
+        yield XXYYPowGate(exponent=2 * self.weights[0] * self.exponent)(*qubits)
         yield cirq.CZPowGate(exponent=self.weights[1] * self.exponent)(*qubits)
 
     def _eigen_components(self):
         return [
             (0, np.diag([1, 0, 0, 0])),
-            (-0.5, np.array([[0, 0, 0, 0],
+            (-1, np.array([[0, 0, 0, 0],
                              [0, 0.5, 0.5, 0],
                              [0, 0.5, 0.5, 0],
                              [0, 0, 0, 0]])),
-            (+0.5, np.array([[0, 0, 0, 0],
+            (1, np.array([[0, 0, 0, 0],
                              [0, 0.5, -0.5, 0],
                              [0, -0.5, 0.5, 0],
                              [0, 0, 0, 0]])),

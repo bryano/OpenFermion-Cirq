@@ -180,8 +180,8 @@ class DoubleExcitationGate(cirq.EigenGate):
         else:
             wire_symbols = (r'/\ \/',
                             r'/\ \/',
-                            '\/ /\\',
-                            '\/ /\\')
+                            '\\/ /\\',
+                            '\\/ /\\')
         return cirq.CircuitDiagramInfo(
             wire_symbols=wire_symbols,
             exponent=self._diagram_exponent(args))
@@ -212,7 +212,8 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
                  exponent: Optional[Union[sympy.Symbol, float]]=None,
                  rads: Optional[float]=None,
                  degs: Optional[float]=None,
-                 duration: Optional[float]=None
+                 duration: Optional[float]=None,
+                 **kwargs
                  ) -> None:
         """Initialize the gate.
 
@@ -247,7 +248,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
                 rads=rads,
                 degs=degs)
 
-        super().__init__(exponent=exponent)
+        super().__init__(exponent=exponent, **kwargs)
 
         if absorb_exponent:
             self.absorb_exponent_into_weights()
@@ -337,6 +338,7 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
 
     def absorb_exponent_into_weights(self):
         self.weights = tuple((w * self._exponent) % 4 for w in self.weights)
+        self._global_shift *= self._exponent
         self._exponent = 1
 
     def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs
