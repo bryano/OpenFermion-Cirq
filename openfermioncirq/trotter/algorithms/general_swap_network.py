@@ -13,25 +13,17 @@
 """A Trotter algorithm using the "fermionic simulation gate"."""
 
 import enum
-import itertools
-from typing import cast, Optional, Sequence, Tuple, TYPE_CHECKING, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import cirq
 import cirq.contrib.acquaintance as cca
-import numpy as np
 from openfermion import InteractionOperator
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from typing import Dict
 
 
 from openfermioncirq.trotter.trotter_algorithm import (
         Hamiltonian,
         TrotterStep,
         TrotterAlgorithm)
-from openfermioncirq.gates import (
-        CombinedSwapAndZ, CombinedCXXYYPowGate, CombinedDoubleExcitationGate)
 
 
 @enum.unique
@@ -46,58 +38,6 @@ class SwapNetworkTrotterStrategy(enum.Enum):
                  'general_swap_network', 'SwapNetworkTrotterStrategy',
                  self.name))
 
-
-def trotterize(hamiltonian: InteractionOperator):
-    """
-
-    Returns gates such that $e^{i H} ~ \prod_a e^{i H_a}$.
-
-    """
-    n_qubits = hamiltonian.n_qubits
-    one_body_tensor = hamiltonian.one_body_tensor
-    two_body_tensor = hamiltonian.two_body_tensor
-    assert np.allclose(one_body_tensor, np.conj(one_body_tensor))
-    assert np.allclose(one_body_tensor, one_body_tensor.T)
-    assert np.allclose(two_body_tensor.reshape((n_qubits ** 2,) * 2),
-            two_body_tensor.reshape((n_qubits ** 2,) * 2).T)
-
-    gates = {} # type: Dict[Tuple[int, ...], cirq.Gate]
-    for p in range(n_qubits):
-        coeff = one_body_tensor[p, p]
-        if coeff:
-            gates[(p,)] = cirq.Z**(-coeff / np.pi)
-    for p, q in itertools.combinations(range(n_qubits), 2):
-        tunneling_coeff = one_body_tensor[p, q]
-        interaction_coeff = (
-                two_body_tensor[p, q, p, q] +
-                two_body_tensor[p, q, q, p] +
-                two_body_tensor[q, p, q, p])
-        weights = (-tunneling_coeff, -interaction_coeff
-                ) # type: Tuple[float, ...]
-        if any(weights):
-            gates[(p, q)] = CombinedSwapAndZ(
-                    cast(Tuple[float, float], weights))
-    for i, j, k in itertools.combinations(range(n_qubits), 3):
-        weights = tuple(
-            two_body_tensor[p, r, q, r] +
-            two_body_tensor[r, p, q, r] +
-            two_body_tensor[p, r, r, q] +
-            two_body_tensor[r, p, r, q]
-            for p, q, r in [(i, j, k), (k, i, j), (j, k, i)])
-        if any(weights):
-            gates[(i, j, k)] = CombinedCXXYYPowGate(
-                    cast(Tuple[float, float, float], weights))
-    for i, j, k, l  in itertools.combinations(range(n_qubits), 4):
-        weights = tuple(
-            two_body_tensor[p, q, r, s] +
-            two_body_tensor[p, q, s, r] +
-            two_body_tensor[q, p, r, s] +
-            two_body_tensor[q, p, s, r]
-            for p, q, r, s in [(i, j, k, l), (i, k, j, l), (i, l, j, k)])
-        if any(weights):
-            gates[(i, j, k, l)] = CombinedDoubleExcitationGate(
-                    cast(Tuple[float, float, float], weights))
-    return gates
 
 
 class GeneralSwapNetworkTrotterAlgorithm(TrotterAlgorithm):
