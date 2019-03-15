@@ -12,8 +12,11 @@
 
 import numpy as np
 import pytest
+import random
 from scipy.linalg import expm, kron
 import sympy
+
+import pytest
 
 import cirq
 import openfermioncirq as ofc
@@ -302,6 +305,9 @@ b: ───XXYY^0.5───#2^0.5───
 """)
 
 
-def test_combined_swap_and_z():
+@pytest.mark.parametrize('weights',
+    [(1, 1), (1, 0), (0, 1)] + 
+    [[random.uniform(-1, 1) for _ in (0, 1)] for _ in range(5)])
+def test_combined_swap_and_z(weights):
     ofc.testing.assert_implements_consistent_protocols(
-        ofc.CombinedSwapAndZ())
+        ofc.CombinedSwapAndZ(weights))

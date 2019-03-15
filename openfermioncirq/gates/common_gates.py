@@ -12,7 +12,7 @@
 
 """Gates that are commonly used for quantum simulation of fermions."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 
@@ -272,7 +272,7 @@ class CombinedSwapAndZ(
                  **kwargs) -> None:
 
         assert len(weights) == 2
-        self.weights = weights
+        self.weights = tuple(weights)
 
         super().__init__(**kwargs)
 
@@ -280,8 +280,9 @@ class CombinedSwapAndZ(
         return 2
 
     def _decompose_(self, qubits):
+        print(self.weights)
         yield XXYYPowGate(exponent=2 * self.weights[0] * self.exponent)(*qubits)
-        yield cirq.CZPowGate(exponent=self.weights[1] * self.exponent)(*qubits)
+        yield cirq.CZPowGate(exponent=-self.weights[1] * self.exponent)(*qubits)
 
     def _eigen_components(self):
         return [
@@ -296,6 +297,13 @@ class CombinedSwapAndZ(
                              [0, 0, 0, 0]])),
             (-self.weights[1], np.diag([0, 0, 0, 1])),
         ]
+
+    def _with_exponent(self,
+                       exponent: Union[sympy.Symbol, float]
+                       ) -> 'CombinedSwapAndZ':
+        gate = type(self)(self.weights, global_shift=self._global_shift)
+        gate._exponent = exponent
+        return gate
 
     def __repr__(self):
         exponent_str = ('' if self.exponent == 1 else
