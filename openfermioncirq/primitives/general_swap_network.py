@@ -11,7 +11,7 @@
 #   limitations under the License.
 
 import itertools
-from typing import cast, Dict, Tuple
+from typing import cast, Dict, Sequence, Tuple
 
 import cirq
 import cirq.contrib.acquaintance as cca
@@ -124,12 +124,30 @@ def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
             constant, one_body_tensor, two_body_tensor)
 
 
+class GreedyExecutionStrategy(cca.GreedyExecutionStrategy):
+    def get_operations(self,
+            indices: Sequence[int],
+            qubits: Sequence[cirq.QubitId],
+            ) -> cirq.OP_TREE:
+        index_set = frozenset(indices)
+        n_indices = len(index_set)
+        if index_set in self.index_set_to_gates:
+            gates = self.index_set_to_gates.pop(index_set)
+            index_to_qubit = dict(zip(indices, qubits))
+            for gate_indices, gate in sorted(gates.items()):
+                yield cca.LinearPermutationGate(n_indices,
+                    dict(zip(gate_indices, indices)), ofc_gates.FSWAP)(*qubits)
+                yield gate(*qubits)
+                yield cca.LinearPermutationGate(n_indices,
+                    dict(zip(indices, gate_indices)), ofc_gates.FSWAP)(*qubits)
+
+
 def trotter_circuit(
         swap_network: cirq.Circuit,
         initial_mapping: Dict[cirq.LineQubit, int],
         hamiltonian: openfermion.InteractionOperator,
         execution_strategy: cca.executor.ExecutionStrategy =
-            cca.GreedyExecutionStrategy,
+            GreedyExecutionStrategy,
         ) -> cirq.Circuit:
 
     gates = trotterize(hamiltonian)

@@ -63,21 +63,13 @@ def test_trotterize_quadratic(hamiltonian):
 def test_trotterize_cubic(hamiltonian):
     assert hamiltonian.constant == 0
     assert np.allclose(hamiltonian.one_body_tensor, np.zeros((3, 3)))
-#   c = hamiltonian.two_body_tensor[0, 1, 0, 2]
-#   c = 0.7 * np.pi
-#   hamiltonian.two_body_tensor = np.zeros((3,) * 4)
-#   hamiltonian.two_body_tensor[0, 1, 1, 2] = c
-#   hamiltonian.two_body_tensor[2, 1, 1, 0] = c
     qubits = cirq.LineQubit.range(3)
     device = cca.UnconstrainedAcquaintanceDevice
     qubit_operator = openfermion.jordan_wigner(hamiltonian)
     qubit_operator_matrix = openfermion.qubit_operator_sparse(qubit_operator)
     expected_unitary = la.expm(1j * qubit_operator_matrix).toarray()
-    print(hamiltonian)
-    print(qubit_operator_matrix)
-#   for perm in itertools.permutations(range(3)):
     initial_mapping = dict(zip(qubits, range(3)))
-    for perm in [(0, 1, 2)]:
+    for perm in itertools.permutations(range(3)):
         ops = [
             cca.LinearPermutationGate(3, dict(zip(range(3), perm)), ofc.FSWAP)(*qubits),
             cca.acquaint(*qubits),
@@ -86,8 +78,6 @@ def test_trotterize_cubic(hamiltonian):
         swap_network = cirq.Circuit.from_ops(ops, device=device)
         circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
         actual_unitary = cirq.unitary(circuit)
-        print(np.around(actual_unitary, 3))
-        print(np.around(expected_unitary, 3))
         assert np.allclose(actual_unitary, expected_unitary)
 
 
@@ -103,8 +93,7 @@ def test_trotterize_quartic(hamiltonian):
     qubit_operator_matrix = openfermion.qubit_operator_sparse(qubit_operator, n_orbitals)
     expected_unitary = la.expm(1j * qubit_operator_matrix).toarray()
     initial_mapping = dict(zip(qubits, range(n_orbitals)))
-#   for perm in itertools.permutations(range(n_orbitals)):
-    for perm in [(0, 1, 2, 3)]:
+    for perm in itertools.permutations(range(n_orbitals)):
         ops = [
             cca.LinearPermutationGate(n_orbitals,
                 dict(zip(range(n_orbitals), perm)), ofc.FSWAP)(*qubits),
