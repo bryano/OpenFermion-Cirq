@@ -15,22 +15,27 @@ import itertools
 import numpy as np
 
 import openfermion
+from openfermion.utils._testing_utils import random_interaction_operator
 
-
-def random_symmetric_matrix(n):
+def random_symmetric_matrix(n: int):
     m = np.random.standard_normal((n, n))
     return (m + m.T) / 2.
 
+def random_interaction_operator_term(
+        order: int,
+        ) -> openfermion.InteractionOperator:
 
-def random_interaction_operator(n_modes):
-    constant = 0
-    one_body_tensor = random_symmetric_matrix(n_modes)
-    one_body_tensor = np.zeros((n_modes,) * 2)
-    two_body_tensor = (
-            random_symmetric_matrix(n_modes ** 2).reshape((n_modes,) * 4))
-    two_body_tensor = np.zeros((n_modes,) * 4)
-    for p, q in itertools.combinations(range(n_modes), 2):
-        two_body_tensor[p, q, p, q] = 1
-    return openfermion.InteractionOperator(
-            constant, one_body_tensor, two_body_tensor)
+    n_orbitals = order
 
+    operator = random_interaction_operator(n_orbitals)
+    operator.constant = 0
+
+    for indices in itertools.product(range(n_orbitals), repeat=2):
+        if len(set(indices)) != order:
+            operator.one_body_tensor[indices] = 0
+
+    for indices in itertools.product(range(n_orbitals), repeat=4):
+        if len(set(indices)) != order:
+            operator.two_body_tensor[indices] = 0
+
+    return operator

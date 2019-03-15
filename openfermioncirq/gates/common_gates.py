@@ -286,15 +286,15 @@ class CombinedSwapAndZ(
     def _eigen_components(self):
         return [
             (0, np.diag([1, 0, 0, 0])),
-            (-1, np.array([[0, 0, 0, 0],
+            (-self.weights[0], np.array([[0, 0, 0, 0],
                              [0, 0.5, 0.5, 0],
                              [0, 0.5, 0.5, 0],
                              [0, 0, 0, 0]])),
-            (1, np.array([[0, 0, 0, 0],
+            (self.weights[0], np.array([[0, 0, 0, 0],
                              [0, 0.5, -0.5, 0],
                              [0, -0.5, 0.5, 0],
                              [0, 0, 0, 0]])),
-            (1, np.diag([0, 0, 0, 1])),
+            (-self.weights[1], np.diag([0, 0, 0, 1])),
         ]
 
     def __repr__(self):

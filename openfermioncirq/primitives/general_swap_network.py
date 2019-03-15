@@ -14,6 +14,7 @@ import itertools
 from typing import cast, Dict, Tuple
 
 import cirq
+import cirq.contrib.acquaintance as cca
 import numpy as np
 
 import openfermion
@@ -26,7 +27,7 @@ from openfermioncirq.gates import (
 def trotterize(hamiltonian: openfermion.InteractionOperator):
     """
 
-    Returns gates such that $e^{i H} ~ \prod_a e^{i H_a}$.
+    Returns gates such that $e^{i H} ~ \\prod_a e^{i H_a}$.
 
     """
     n_qubits = hamiltonian.n_qubits
@@ -41,13 +42,14 @@ def trotterize(hamiltonian: openfermion.InteractionOperator):
     for p in range(n_qubits):
         coeff = one_body_tensor[p, p]
         if coeff:
-            gates[(p,)] = cirq.Z**(-coeff / np.pi)
+            gates[(p,)] = cirq.Z**(coeff / np.pi)
     for p, q in itertools.combinations(range(n_qubits), 2):
-        tunneling_coeff = one_body_tensor[p, q]
+        tunneling_coeff = one_body_tensor[p, q] / np.pi
         interaction_coeff = (
-                two_body_tensor[p, q, p, q] +
-                two_body_tensor[p, q, q, p] +
-                two_body_tensor[q, p, q, p])
+                - two_body_tensor[p, q, p, q]
+                + two_body_tensor[q, p, p, q]
+                + two_body_tensor[p, q, q, p]
+                - two_body_tensor[q, p, q, p]) / np.pi
         weights = (-tunneling_coeff, -interaction_coeff
                 ) # type: Tuple[float, ...]
         if any(weights):
@@ -55,8 +57,8 @@ def trotterize(hamiltonian: openfermion.InteractionOperator):
                     cast(Tuple[float, float], weights))
     for i, j, k in itertools.combinations(range(n_qubits), 3):
         weights = tuple(
-            two_body_tensor[p, r, q, r] +
-            two_body_tensor[r, p, q, r] +
+            two_body_tensor[p, r, q, r] -
+            two_body_tensor[r, p, q, r] -
             two_body_tensor[p, r, r, q] +
             two_body_tensor[r, p, r, q]
             for p, q, r in [(i, j, k), (k, i, j), (j, k, i)])
@@ -83,7 +85,7 @@ def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
 
     for indices, gate in gates.items():
         if isinstance(gate, cirq.ZPowGate):
-            coeff = -gate._exponent * np.pi
+            coeff = gate._exponent * np.pi
             global_shift += gate._exponent * gate._global_shift * np.pi
             one_body_tensor[indices * 2] += coeff
         elif isinstance(gate, ofc_gates.CombinedSwapAndZ):
@@ -120,3 +122,16 @@ def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
     return openfermion.InteractionOperator(
             constant, one_body_tensor, two_body_tensor)
 
+
+def trotter_circuit(
+        swap_network: cirq.Circuit,
+        initial_mapping: Dict[cirq.LineQubit, int],
+        hamiltonian: openfermion.InteractionOperator,
+        execution_strategy: cca.executor.ExecutionStrategy =
+            cca.GreedyExecutionStrategy,
+        ) -> cirq.Circuit:
+
+    gates = trotterize(hamiltonian)
+    circuit = swap_network.copy()
+    execution_strategy(gates, initial_mapping)(circuit)
+    return circuit
