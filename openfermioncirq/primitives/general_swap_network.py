@@ -56,12 +56,13 @@ def trotterize(hamiltonian: openfermion.InteractionOperator):
             gates[(p, q)] = CombinedSwapAndZ(
                     cast(Tuple[float, float], weights))
     for i, j, k in itertools.combinations(range(n_qubits), 3):
-        weights = tuple(
-            two_body_tensor[p, r, q, r] -
-            two_body_tensor[r, p, q, r] -
-            two_body_tensor[p, r, r, q] +
-            two_body_tensor[r, p, r, q]
-            for p, q, r in [(i, j, k), (k, i, j), (j, k, i)])
+        weights = tuple(2 * sgn * (
+            two_body_tensor[p, q, p, r] -
+            two_body_tensor[p, q, r, p] -
+            two_body_tensor[q, p, p, r] +
+            two_body_tensor[q, p, r, p]) / np.pi
+            for sgn, (p, q, r) in zip(
+                [1, -1, 1], [(i, j, k), (j, k, i), (k, i, j)]))
         if any(weights):
             gates[(i, j, k)] = CombinedCXXYYPowGate(
                     cast(Tuple[float, float, float], weights))
