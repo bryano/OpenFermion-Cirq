@@ -79,6 +79,7 @@ def trotterize(hamiltonian: openfermion.InteractionOperator):
     return gates
 
 def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
+    # assumes gate indices in JW order
     one_body_tensor = np.zeros((n_modes,) * 2)
     two_body_tensor = np.zeros((n_modes,) * 4)
 
@@ -90,26 +91,26 @@ def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
             global_shift += gate._exponent * gate._global_shift * np.pi
             one_body_tensor[indices * 2] += coeff
         elif isinstance(gate, ofc_gates.CombinedSwapAndZ):
-            weights = tuple(-w * gate._exponent for w in gate.weights)
+            weights = tuple(-np.pi * w * gate._exponent for w in gate.weights)
             global_shift += gate._exponent * gate._global_shift
             one_body_tensor[indices] += weights[0]
-            two_body_tensor[indices * 2] += weights[1]
+            two_body_tensor[indices * 2] -= weights[1]
         elif isinstance(gate, ofc_gates.CombinedCXXYYPowGate):
             weights = tuple(
                     -0.5 * np.pi * w * gate._exponent for w in gate.weights)
             global_shift += gate._exponent * gate._global_shift
             p, q, r = indices
-            two_body_tensor[p, q, p, r] += weights[0]
-            two_body_tensor[p, q, q, r] += weights[1]
-            two_body_tensor[p, r, q, r] += weights[2]
+            two_body_tensor[p, q, p, r] -= weights[0]
+            two_body_tensor[p, q, q, r] -= weights[1]
+            two_body_tensor[p, r, q, r] -= weights[2]
         elif isinstance(gate, ofc_gates.CombinedDoubleExcitationGate):
             weights = tuple(
                     0.5 * np.pi * w * gate._exponent for w in gate.weights)
             global_shift += gate._exponent * gate._global_shift
             p, q, r, s = indices
-            two_body_tensor[p, s, q, r] += weights[0]
-            two_body_tensor[p, r, q, s] += weights[1]
-            two_body_tensor[p, q, r, s] += weights[2]
+            two_body_tensor[p, s, q, r] -= weights[0]
+            two_body_tensor[p, r, q, s] -= weights[1]
+            two_body_tensor[p, q, r, s] -= weights[2]
         else:
             raise NotImplementedError()
 

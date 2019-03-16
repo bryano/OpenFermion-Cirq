@@ -22,8 +22,6 @@ import scipy.linalg as la
 import openfermioncirq as ofc
 from openfermioncirq.primitives.general_swap_network import (
         trotterize, untrotterize, trotter_circuit)
-from openfermioncirq.primitives.normal_order import (
-        normal_ordered_interaction_operator)
 
 
 @pytest.mark.parametrize('hamiltonian',
@@ -123,7 +121,7 @@ def test_untrotterize_linear(constant, potential):
 @pytest.mark.parametrize('constant,tunneling,interaction,scale',
     [(0,0,0,1), (1, 1, 1, 1), (0.2, -0.5, 1.7, 0.3), (-0.1, -0.5, 1, -1)])
 def test_untrotterize_quadratic(constant, tunneling, interaction, scale):
-    weights = (-tunneling, -interaction)
+    weights = (-tunneling / np.pi, interaction / np.pi)
     gate = ofc.CombinedSwapAndZ(weights, exponent=scale, global_shift=constant)
     gates = {(0, 1): gate}
     hamiltonian = untrotterize(2, gates)
@@ -155,8 +153,8 @@ def test_untrotterize_cubic(constant, coeffs, scale):
     expected_two_body_tensor = np.zeros((3,) * 4)
     composite_indices = [((0, 1), (0, 2)), ((0, 1), (1, 2)), ((0, 2), (1, 2))]
     for (pq, rs), w in zip(composite_indices, coeffs):
-        expected_two_body_tensor[pq + rs] = w
-        expected_two_body_tensor[rs + pq] = w
+        expected_two_body_tensor[pq + rs] = -w
+        expected_two_body_tensor[rs + pq] = -w
     expected_two_body_tensor *= scale
     assert np.allclose(hamiltonian.two_body_tensor, expected_two_body_tensor)
 
@@ -177,28 +175,26 @@ def test_untrotterize_quartic(constant, coeffs, scale):
     expected_two_body_tensor = np.zeros((4,) * 4)
     composite_indices = [((0, 3), (1, 2)), ((0, 2), (1, 3)), ((0, 1), (2, 3))]
     for (pq, rs), w in zip(composite_indices, coeffs):
-        expected_two_body_tensor[pq + rs] = w
-        expected_two_body_tensor[rs + pq] = w
+        expected_two_body_tensor[pq + rs] = -w
+        expected_two_body_tensor[rs + pq] = -w
     expected_two_body_tensor *= scale
     assert np.allclose(np.mod(hamiltonian.two_body_tensor, 2 * np.pi),
                        np.mod(expected_two_body_tensor, 2 * np.pi))
 
 
 @pytest.mark.parametrize('hamiltonian',
-#       [ofc.testing.random_interaction_operator(5) for _ in range(10)])
-        [ofc.testing.random_interaction_operator(2) for _ in range(1)])
+        [ofc.testing.random_interaction_operator(5) for _ in range(10)])
 def test_untrotterize(hamiltonian):
     hamiltonian.constant = 0
     n_modes = len(hamiltonian.one_body_tensor)
     normal_ordered_hamiltonian = (
-            normal_ordered_interaction_operator(hamiltonian))
+            openfermion.normal_ordered(hamiltonian))
 
     gates = trotterize(hamiltonian)
 
     other_hamiltonian = untrotterize(n_modes, gates)
     other_normal_ordered_hamiltonian = (
-            normal_ordered_interaction_operator(other_hamiltonian))
-    print(gates)
-    print(normal_ordered_hamiltonian)
-    print(other_normal_ordered_hamiltonian)
-#   assert normal_ordered_hamiltonian == other_normal_ordered_hamiltonian
+            openfermion.normal_ordered(other_hamiltonian))
+    normal_ordered_hamiltonian %= 2 * np.pi
+    other_normal_ordered_hamiltonian %= 2 * np.pi
+    assert normal_ordered_hamiltonian == other_normal_ordered_hamiltonian
