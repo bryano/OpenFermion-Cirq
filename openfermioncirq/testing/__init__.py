@@ -27,4 +27,4 @@ from openfermioncirq.testing.wrapped import (
 )
 
 from openfermioncirq.testing.random import (
-    random_interaction_operator)
+    random_interaction_operator_term)

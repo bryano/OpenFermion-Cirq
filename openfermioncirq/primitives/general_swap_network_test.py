@@ -25,7 +25,7 @@ from openfermioncirq.primitives.general_swap_network import (
 
 
 @pytest.mark.parametrize('order,hamiltonian',
-    [(order, ofc.testing.random.random_interaction_operator_term(order))
+    [(order, ofc.testing.random_interaction_operator_term(order))
      for order in (1, 2, 3, 4) for _ in range(5)])
 def test_trotterize_term(order, hamiltonian):
     n_orbitals = order
@@ -48,6 +48,20 @@ def test_trotterize_term(order, hamiltonian):
         circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
         actual_unitary = cirq.unitary(circuit)
         assert np.allclose(actual_unitary, expected_unitary)
+
+
+@pytest.mark.parametrize('hamiltonian',
+    [openfermion.utils._testing_utils.random_interaction_operator(5)
+    for _ in range(10)])
+def test_trotterize(hamiltonian):
+    n_orbitals = openfermion.count_qubits(hamiltonian)
+    qubits = cirq.LineQubit.range(n_orbitals)
+    initial_mapping = dict(zip(qubits, range(n_orbitals)))
+    swap_network = cca.complete_acquaintance_strategy(qubits, 4, ofc.FSWAP)
+    circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
+    actual_unitary = cirq.unitary(circuit)
+    expected_unitary = TODO
+    assert np.allclose(actual_unitary, expected_unitary)
 
 
 @pytest.mark.parametrize('constant,potential',
@@ -128,7 +142,8 @@ def test_untrotterize_quartic(constant, coeffs, scale):
 
 
 @pytest.mark.parametrize('hamiltonian',
-        [ofc.testing.random_interaction_operator(5) for _ in range(10)])
+    [openfermion.utils._testing_utils.random_interaction_operator(5)
+    for _ in range(10)])
 def test_untrotterize(hamiltonian):
     hamiltonian.constant = 0
     n_modes = len(hamiltonian.one_body_tensor)
