@@ -24,71 +24,16 @@ from openfermioncirq.primitives.general_swap_network import (
         trotterize, untrotterize, trotter_circuit)
 
 
-@pytest.mark.parametrize('hamiltonian',
-    [ofc.testing.random.random_interaction_operator_term(1) for _ in range(5)])
-def test_trotterize_linear(hamiltonian):
-    q = cirq.LineQubit(0)
-    gate = cca.acquaint(q)
-    device = cca.UnconstrainedAcquaintanceDevice
-    swap_network = cirq.Circuit.from_ops(gate, device=device)
-    initial_mapping = {q: 0}
-    circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
-    actual_unitary = cirq.unitary(circuit)
-    qubit_operator = openfermion.jordan_wigner(hamiltonian)
-    qubit_operator_matrix = openfermion.qubit_operator_sparse(qubit_operator)
-    expected_unitary = la.expm(1j * qubit_operator_matrix).toarray()
-    assert np.allclose(actual_unitary, expected_unitary)
-
-
-@pytest.mark.parametrize('hamiltonian',
-    [ofc.testing.random.random_interaction_operator_term(2) for _ in range(5)])
-def test_trotterize_quadratic(hamiltonian):
-    qubits = cirq.LineQubit.range(2)
-    gate = cca.acquaint(*qubits)
-    device = cca.UnconstrainedAcquaintanceDevice
-    swap_network = cirq.Circuit.from_ops(gate, device=device)
-    qubit_operator = openfermion.jordan_wigner(hamiltonian)
-    qubit_operator_matrix = openfermion.qubit_operator_sparse(qubit_operator)
-    expected_unitary = la.expm(1j * qubit_operator_matrix).toarray()
-    initial_mapping = dict(zip(qubits, range(2)))
-    circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
-    actual_unitary = cirq.unitary(circuit)
-    assert np.allclose(actual_unitary, expected_unitary)
-
-
-@pytest.mark.parametrize('hamiltonian',
-    [ofc.testing.random.random_interaction_operator_term(3) for _ in range(5)])
-def test_trotterize_cubic(hamiltonian):
-    assert hamiltonian.constant == 0
-    assert np.allclose(hamiltonian.one_body_tensor, np.zeros((3, 3)))
-    qubits = cirq.LineQubit.range(3)
-    device = cca.UnconstrainedAcquaintanceDevice
-    qubit_operator = openfermion.jordan_wigner(hamiltonian)
-    qubit_operator_matrix = openfermion.qubit_operator_sparse(qubit_operator)
-    expected_unitary = la.expm(1j * qubit_operator_matrix).toarray()
-    initial_mapping = dict(zip(qubits, range(3)))
-    for perm in itertools.permutations(range(3)):
-        ops = [
-            cca.LinearPermutationGate(3, dict(zip(range(3), perm)), ofc.FSWAP)(*qubits),
-            cca.acquaint(*qubits),
-            cca.LinearPermutationGate(3, dict(zip(perm, range(3))), ofc.FSWAP)(*qubits)
-            ]
-        swap_network = cirq.Circuit.from_ops(ops, device=device)
-        circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
-        actual_unitary = cirq.unitary(circuit)
-        assert np.allclose(actual_unitary, expected_unitary)
-
-
-@pytest.mark.parametrize('hamiltonian',
-    [ofc.testing.random.random_interaction_operator_term(4) for _ in range(5)])
-def test_trotterize_quartic(hamiltonian):
-    n_orbitals = 4
-    assert hamiltonian.constant == 0
-    assert np.allclose(hamiltonian.one_body_tensor, np.zeros((4, 4)))
+@pytest.mark.parametrize('order,hamiltonian',
+    [(order, ofc.testing.random.random_interaction_operator_term(order))
+     for order in (1, 2, 3, 4) for _ in range(5)])
+def test_trotterize_term(order, hamiltonian):
+    n_orbitals = order
     qubits = cirq.LineQubit.range(n_orbitals)
     device = cca.UnconstrainedAcquaintanceDevice
     qubit_operator = openfermion.jordan_wigner(hamiltonian)
-    qubit_operator_matrix = openfermion.qubit_operator_sparse(qubit_operator, n_orbitals)
+    qubit_operator_matrix = openfermion.qubit_operator_sparse(
+            qubit_operator, n_orbitals)
     expected_unitary = la.expm(1j * qubit_operator_matrix).toarray()
     initial_mapping = dict(zip(qubits, range(n_orbitals)))
     for perm in itertools.permutations(range(n_orbitals)):
