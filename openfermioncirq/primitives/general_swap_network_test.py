@@ -21,7 +21,7 @@ import scipy.linalg as la
 
 import openfermioncirq as ofc
 from openfermioncirq.primitives.general_swap_network import (
-        trotterize, untrotterize, trotter_circuit)
+        trotterize, untrotterize, trotter_circuit, trotter_unitary)
 
 
 @pytest.mark.parametrize('order,hamiltonian',
@@ -50,17 +50,25 @@ def test_trotterize_term(order, hamiltonian):
         assert np.allclose(actual_unitary, expected_unitary)
 
 
-@pytest.mark.parametrize('hamiltonian',
-    [openfermion.utils._testing_utils.random_interaction_operator(5)
-    for _ in range(10)])
-def test_trotterize(hamiltonian):
-    n_orbitals = openfermion.count_qubits(hamiltonian)
-    qubits = cirq.LineQubit.range(n_orbitals)
-    initial_mapping = dict(zip(qubits, range(n_orbitals)))
-    swap_network = cca.complete_acquaintance_strategy(qubits, 4, ofc.FSWAP)
+@pytest.mark.parametrize('order,hamiltonian',
+    [(order, openfermion.utils._testing_utils.random_interaction_operator(5))
+     for order in (1, 2, 3, 4) for _ in range(2)])
+def test_trotterize(order, hamiltonian):
+    hamiltonian = hamiltonian.projected(order, True)
+
+    qubits = cirq.LineQubit.range(hamiltonian.n_qubits)
+    initial_mapping = dict(zip(qubits, range(hamiltonian.n_qubits)))
+    swap_network = cca.complete_acquaintance_strategy(
+            qubits, order, ofc.FSWAP, remove_redundancies=True)
+    cca.return_to_initial_mapping(swap_network, ofc.FSWAP)
+    cca.compress_permutations(swap_network, ofc.FSWAP)
+
     circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
-    actual_unitary = cirq.unitary(circuit)
-    expected_unitary = TODO
+
+    actual_unitary = circuit.to_unitary_matrix(qubit_order=qubits)
+    acquaintance_dag = cca.get_acquaintance_dag(swap_network, initial_mapping)
+    expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
+
     assert np.allclose(actual_unitary, expected_unitary)
 
 

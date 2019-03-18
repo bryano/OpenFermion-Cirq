@@ -10,6 +10,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from typing import cast, Tuple
+
 import numpy as np
 import pytest
 import random
@@ -306,8 +308,9 @@ b: ───XXYY^0.5───#2^0.5───
 
 
 @pytest.mark.parametrize('weights',
-    [(1, 1), (1, 0), (0, 1)] + 
-    [[random.uniform(-1, 1) for _ in (0, 1)] for _ in range(5)])
+    [cast(Tuple[float, float], (1, 1)), (1, 0), (0, 1)] +
+    [cast(Tuple[float, float], tuple(random.uniform(-1, 1) for _ in (0, 1)))
+        for _ in range(5)])
 def test_combined_swap_and_z(weights):
     ofc.testing.assert_implements_consistent_protocols(
         ofc.CombinedSwapAndZ(weights))

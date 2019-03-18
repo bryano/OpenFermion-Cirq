@@ -15,7 +15,6 @@ import pytest
 
 import openfermion
 
-import openfermioncirq as ofc
 import openfermioncirq.testing.random  as ofctr
 from openfermioncirq.primitives.general_swap_network import (
         trotterize)

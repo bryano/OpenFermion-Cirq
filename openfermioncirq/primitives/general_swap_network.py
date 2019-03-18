@@ -16,6 +16,7 @@ from typing import cast, Dict, Sequence, Tuple
 import cirq
 import cirq.contrib.acquaintance as cca
 import numpy as np
+import scipy.linalg as la
 
 import openfermion
 import openfermioncirq.gates as ofc_gates
@@ -128,19 +129,22 @@ def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
 class GreedyExecutionStrategy(cca.GreedyExecutionStrategy):
     def get_operations(self,
             indices: Sequence[int],
-            qubits: Sequence[cirq.QubitId],
+            qubits: Sequence[cirq.Qid],
             ) -> cirq.OP_TREE:
         index_set = frozenset(indices)
         n_indices = len(index_set)
+        abs_to_rel = dict(zip(indices, range(n_indices)))
         if index_set in self.index_set_to_gates:
             gates = self.index_set_to_gates.pop(index_set)
-            index_to_qubit = dict(zip(indices, qubits))
             for gate_indices, gate in sorted(gates.items()):
-                yield cca.LinearPermutationGate(n_indices,
-                    dict(zip(gate_indices, indices)), ofc_gates.FSWAP)(*qubits)
+                perm = dict(zip((abs_to_rel[i] for i in gate_indices),
+                    (abs_to_rel[j] for j in indices)))
+                reverse_perm = dict((j, i) for i, j in perm.items())
+                yield cca.LinearPermutationGate(n_indices, perm,
+                        ofc_gates.FSWAP)(*qubits)
                 yield gate(*qubits)
-                yield cca.LinearPermutationGate(n_indices,
-                    dict(zip(indices, gate_indices)), ofc_gates.FSWAP)(*qubits)
+                yield cca.LinearPermutationGate(n_indices, reverse_perm,
+                        ofc_gates.FSWAP)(*qubits)
 
 
 def trotter_circuit(
@@ -155,3 +159,19 @@ def trotter_circuit(
     circuit = swap_network.copy()
     execution_strategy(gates, initial_mapping)(circuit)
     return circuit
+
+
+def trotter_unitary(
+        acquaintance_dag: cirq.CircuitDag,
+        hamiltonian: openfermion.InteractionOperator,
+        ) -> np.ndarray:
+    unitary = np.eye(1 << hamiltonian.n_qubits)
+    for acquaintance_op in acquaintance_dag.all_operations():
+        indices = acquaintance_op.logical_indices
+        partial_hamiltonian = hamiltonian.projected(indices, exact=True)
+        qubit_operator = openfermion.jordan_wigner(partial_hamiltonian)
+        qubit_operator_matrix = openfermion.qubit_operator_sparse(
+                qubit_operator, hamiltonian.n_qubits)
+        partial_unitary = la.expm(1j * qubit_operator_matrix).toarray()
+        unitary = np.dot(partial_unitary, unitary)
+    return unitary

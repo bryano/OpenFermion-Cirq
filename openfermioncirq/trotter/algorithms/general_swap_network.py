@@ -49,7 +49,7 @@ class GeneralSwapNetworkTrotterAlgorithm(TrotterAlgorithm):
     """
 
     def __init__(self,
-            initial_order: Sequence[cirq.QubitId],
+            initial_order: Sequence[cirq.Qid],
             swap_network: cirq.Circuit,
             strategy: Union[str, SwapNetworkTrotterStrategy] =
                 SwapNetworkTrotterStrategy.FIRST
@@ -80,7 +80,7 @@ class GeneralSwapNetworkTrotterStep(TrotterStep):
 
     def __init__(self,
             hamiltonian: InteractionOperator,
-            initial_order: Tuple[cirq.QubitId, ...],
+            initial_order: Tuple[cirq.Qid, ...],
             swap_network: cirq.Circuit,
             strategy: SwapNetworkTrotterStrategy
             ) -> None:
@@ -95,8 +95,8 @@ class AsymmetricGeneralSwapNetworkTrotterStep(GeneralSwapNetworkTrotterStep):
 
     def trotter_step(
             self,
-            qubits: Sequence[cirq.QubitId],
+            qubits: Sequence[cirq.Qid],
             time: float,
-            control_qubit: Optional[cirq.QubitId]=None
+            control_qubit: Optional[cirq.Qid]=None
             ) -> cirq.OP_TREE:
         raise NotImplementedError()

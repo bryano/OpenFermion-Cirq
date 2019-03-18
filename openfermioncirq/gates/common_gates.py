@@ -12,7 +12,7 @@
 
 """Gates that are commonly used for quantum simulation of fermions."""
 
-from typing import Optional, Tuple, Union
+from typing import cast, Optional, Tuple, Union
 
 import numpy as np
 
@@ -272,7 +272,7 @@ class CombinedSwapAndZ(
                  **kwargs) -> None:
 
         assert len(weights) == 2
-        self.weights = tuple(weights)
+        self.weights = cast(Tuple[float, float], tuple(weights))
 
         super().__init__(**kwargs)
 
