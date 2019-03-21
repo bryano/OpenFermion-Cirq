@@ -388,3 +388,11 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
             'exponent={})'.format(
                 ', '.join(proper_repr(v) for v in self.weights),
                 proper_repr(self.exponent)))
+
+    def _resolve_parameters_(self, resolver):
+        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
+        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
+        resolved_global_shift = cirq.resolve_parameters(
+                self._global_shift, resolver)
+        return type(self)(resolved_weights, exponent = resolved_exponent,
+                global_shift = resolved_global_shift)

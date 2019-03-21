@@ -280,7 +280,6 @@ class CombinedSwapAndZ(
         return 2
 
     def _decompose_(self, qubits):
-        print(self.weights)
         yield XXYYPowGate(exponent=2 * self.weights[0] * self.exponent)(*qubits)
         yield cirq.CZPowGate(exponent=-self.weights[1] * self.exponent)(*qubits)
 
@@ -311,3 +310,18 @@ class CombinedSwapAndZ(
         return ('ofc.CombinedSwapAndZ(({}){})'.format(
                 ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
                 exponent_str))
+
+#   def _value_equality_values_(self):
+#       return tuple(self.weights) + super()._value_equality_values()
+
+#   def _is_parameterized_(self):
+#       return any(cirq.is_parameterized(v)
+#               for v in self._value_equality_values_())
+
+    def _resolve_parameters_(self, resolver):
+        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
+        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
+        resolved_global_shift = cirq.resolve_parameters(
+                self._global_shift, resolver)
+        return type(self)(resolved_weights, exponent = resolved_exponent,
+                global_shift = resolved_global_shift)
