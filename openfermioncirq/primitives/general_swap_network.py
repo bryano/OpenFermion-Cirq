@@ -24,6 +24,16 @@ import openfermioncirq.gates as ofc_gates
 from openfermioncirq.gates import (
         CombinedSwapAndZ, CombinedCXXYYPowGate, CombinedDoubleExcitationGate)
 
+class FermionicSwapNetwork:
+    def __init__(self,
+            circuit: cirq.Circuit,
+            initial_mapping: Dict[cirq.Qid, int],
+            qubit_order: Sequence[cirq.Qid]
+            ) -> None:
+        self.circuit = circuit
+        self.initial_mapping = initial_mapping
+        self.qubit_order = qubit_order
+
 
 def trotterize(hamiltonian: openfermion.InteractionOperator):
     """
@@ -154,7 +164,7 @@ def trotter_circuit(
         execution_strategy: cca.executor.ExecutionStrategy =
             GreedyExecutionStrategy,
         ) -> cirq.Circuit:
-
+    assert openfermion.is_hermitian(hamiltonian)
     gates = trotterize(hamiltonian)
     circuit = swap_network.copy()
     execution_strategy(gates, initial_mapping)(circuit)
@@ -165,6 +175,7 @@ def trotter_unitary(
         acquaintance_dag: cirq.CircuitDag,
         hamiltonian: openfermion.InteractionOperator,
         ) -> np.ndarray:
+    assert openfermion.is_hermitian(hamiltonian)
     unitary = np.eye(1 << hamiltonian.n_qubits)
     for acquaintance_op in acquaintance_dag.all_operations():
         indices = acquaintance_op.logical_indices

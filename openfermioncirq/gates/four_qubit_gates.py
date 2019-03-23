@@ -13,7 +13,7 @@
 """Gates that target four qubits."""
 
 
-from typing import Optional, Union, Tuple
+from typing import cast, Optional, Union, Tuple
 
 import numpy as np
 import sympy
@@ -233,7 +233,8 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
         """
 
         assert len(weights) == 3
-        self.weights = weights
+        self.weights = cast(Tuple[float, float, float], tuple(
+            w if cirq.is_parameterized(w) else float(w) for w in weights))
 
         if len([1 for e in [exponent, rads, degs, duration]
                 if e is not None]) > 1:

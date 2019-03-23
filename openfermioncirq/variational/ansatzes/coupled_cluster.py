@@ -22,7 +22,8 @@ import openfermion
 import sympy
 
 from openfermioncirq.gates import FSWAP
-from openfermioncirq.primitives.general_swap_network import trotterize
+from openfermioncirq.primitives.general_swap_network import (
+        FermionicSwapNetwork, trotterize, GreedyExecutionStrategy)
 from openfermioncirq.variational.ansatz import VariationalAnsatz
 from openfermioncirq.variational.letter_with_subscripts import (
         LetterWithSubscripts)
@@ -86,28 +87,13 @@ class SymbolicTensor(collections.defaultdict):
             self[key] *= other
         return self
 
-#   def __mul__(self, other):
-#       product = self.copy()
-#       product *= other
-#       return product
-
 
 class SymbolicInteractionOperator(openfermion.InteractionOperator):
     def __init__(self,
-            constant: Coefficient = 0,
-#           one_body_tensor: DefaultDict[OneBodyIndex, Coefficient] = None,
-#           two_body_tensor: DefaultDict[TwoBodyIndex, Coefficient] = None):
-            one_body_tensor: SymbolicTensor = None,
-            two_body_tensor: SymbolicTensor = None):
+            constant: Coefficient,
+            one_body_tensor: SymbolicTensor,
+            two_body_tensor: SymbolicTensor):
         self.n_qubits = len(one_body_tensor)
-#       one_body_tensor = (collections.defaultdict(int) if
-#               one_body_tensor is None else one_body_tensor)
-#       two_body_tensor = (collections.defaultdict(int) if
-#               two_body_tensor is None else two_body_tensor)
-        one_body_tensor = (SymbolicTensor((n_qubits,) * 2, int) if
-                one_body_tensor is None else one_body_tensor)
-        two_body_tensor = (SymbolicTensor((n_qubits,) * 4, int) if
-                two_body_tensor is None else two_body_tensor)
         self.n_body_tensors = {
                 (): constant,
                 (1, 0): one_body_tensor,
@@ -148,6 +134,10 @@ class CoupledClusterOperatorType(metaclass=abc.ABCMeta):
 #               for indices in self.indices_iter())
 #       for indices in spatial_index_sets:
 #           yield LetterWithSubscripts('t', *indices)
+
+    @abc.abstractmethod
+    def swap_network(self) -> FermionicSwapNetwork:
+        pass
 
     @abc.abstractmethod
     def operator(self) -> SymbolicInteractionOperator:
@@ -248,23 +238,24 @@ class CoupledClusterOperator(CoupledClusterOperatorType):
 
 
 class GeneralizedCoupledClusterOperator(CoupledClusterOperatorType):
-    pass
-#   def __init__(self,
-#           n_spatial_modes: int,
-#           order: int = 2) -> None:
-#       self.n_spatial_modes = n_spatial_modes
-#       self.order = order
+    def __init__(self,
+            n_spatial_modes: int,
+            order: int = 1) -> None:
+        self._n_spatial_modes = n_spatial_modes
+        self.order = order
 
-#   @property
-#   def n_spatial_modes(self):
-#       return self._n_spatial_modes
+    @property
+    def n_spatial_modes(self):
+        return self._n_spatial_modes
 
+    def params(self):
+        raise NotImplementedError()
 
-#   def params(self):
-#       raise NotImplementedError()
+    def operator(self):
+        raise NotImplementedError()
 
-#   def operator(self):
-#       raise NotImplementedError()
+    def swap_network(self):
+        raise NotImplementedError()
 
 #   def order_iter(self):
 #       return range(1, self.order + 1)
@@ -307,10 +298,6 @@ class PairedCoupledClusterOperator(CoupledClusterOperatorType):
 
     def operator(self):
         constant = 0
-#       one_body_tensor = collections.defaultdict(int
-#               ) # type: DefaultDict[OneBodyIndex, Coefficient]
-#       two_body_tensor = collections.defaultdict(int
-#               ) # type: DefaultDict[TwoBodyIndex, Coefficient]
         one_body_tensor = SymbolicTensor((self.n_spin_modes,) * 2, int)
         two_body_tensor = SymbolicTensor((self.n_spin_modes,) * 4, int)
 
@@ -324,6 +311,25 @@ class PairedCoupledClusterOperator(CoupledClusterOperatorType):
 
         return SymbolicInteractionOperator(
                constant, one_body_tensor, two_body_tensor)
+
+    def swap_network(self) -> FermionicSwapNetwork:
+        n_qubits = 2 * self.n_spatial_modes
+
+        qubits = cirq.LineQubit.range(n_qubits)
+        qubit_pairs = [qubits[2 * i: 2 * (i + 1)] for i in range(self.n_spatial_modes)]
+        circuit, qubit_order = cca.quartic_paired_acquaintance_strategy(
+                qubit_pairs, FSWAP)
+        qubit_mapping = dict(zip(qubit_order, qubits))
+        circuit = circuit.with_device(circuit.device, qubit_mapping.get)
+        initial_permutation = {l.x: i for i, l in enumerate(qubit_order)}
+        initial_permutation_gate = cca.LinearPermutationGate(n_qubits, initial_permutation, swap_gate = FSWAP)
+        circuit.insert(0, initial_permutation_gate(*qubits))
+        initial_mapping = {q: i for i, q in enumerate(qubits)}
+
+        cca.return_to_initial_mapping(circuit, FSWAP)
+
+        return FermionicSwapNetwork(circuit, initial_mapping, qubits)
+
 
 #   def order_iter(self):
 #       return (1, 2)
@@ -358,20 +364,17 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
 
     def __init__(self,
             cluster_operator: CoupledClusterOperator,
-            swap_network: cirq.Circuit,
-            initial_mapping: Dict[cirq.LineQubit, int],
             execution_strategy: cca.executor.ExecutionStrategy =
-                cca.GreedyExecutionStrategy,
+                GreedyExecutionStrategy,
             **kwargs) -> None:
 
         self.cluster_operator = cluster_operator
         operator = self.cluster_operator.operator()
         exponent = -1j * (operator - openfermion.hermitian_conjugated(operator))
         gates = trotterize(exponent)
-        circuit = swap_network.copy()
-        cca.return_to_initial_mapping(circuit, FSWAP)
-        execution_strategy(gates, initial_mapping)(circuit)
-        self._circuit = circuit
+        swap_network = cluster_operator.swap_network()
+        execution_strategy(gates, swap_network.initial_mapping)(swap_network.circuit)
+        self._circuit = swap_network.circuit
 
         super().__init__(**kwargs)
 

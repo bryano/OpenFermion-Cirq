@@ -11,6 +11,7 @@
 #   limitations under the License.
 
 import collections
+import itertools
 import random
 
 import cirq
@@ -22,7 +23,7 @@ import pytest
 
 import openfermioncirq as ofc
 from openfermioncirq.primitives.general_swap_network import (
-    trotter_unitary)
+    trotterize, trotter_unitary)
 from openfermioncirq.variational.letter_with_subscripts import LetterWithSubscripts
 from openfermioncirq.variational.ansatzes.coupled_cluster import (
     CoupledClusterOperator, GeneralizedCoupledClusterOperator,
@@ -55,28 +56,46 @@ def test_paired_cc_operator(n_spatial_modes):
     assert openfermion.is_hermitian(exponent)
 
 
-def test_paired_ucc():
-    n_spatial_modes = 2
-    qubits = cirq.LineQubit.range(2 * n_spatial_modes)
-    qubit_pairs = [qubits[2 * i: 2 * (i + 1)] for i in range(n_spatial_modes)]
-    swap_network, qubit_order = cca.quartic_paired_acquaintance_strategy(
-            qubit_pairs, ofc.FSWAP)
-    initial_mapping = {p: l.x for p, l in zip(qubits, qubit_order)}
+def print_hermitian_matrices(*matrices):
+    matrices = tuple(matrices)
+    assert len(set(m.shape for m in matrices)) == 1
+    N = len(matrices[0])
+    n = int(np.log2(N))
+    assert N == 1 << n
+    for i, j in itertools.combinations_with_replacement(range(N), 2):
+        vs = tuple(matrix[i, j] for matrix in matrices)
+        if any(vs):
+            line = '{0:0{n}b} {1:0{n}b} '.format(i, j, n=n)
+            line += ' '.join('{}'.format(v) for v in vs)
+            print(line)
 
-    cluster_operator = PairedCoupledClusterOperator(n_spatial_modes)
-    ansatz = UnitaryCoupledClusterAnsatz(
-            cluster_operator, swap_network, initial_mapping)
-    resolver = {p: 1j * random.uniform(-5, 5) for p in ansatz.params()}
-    resolver = {p: 0 for p in ansatz.params()}
-    resolver[LetterWithSubscripts('t', 0, 1)] = 1j * np.pi
+
+def random_resolver(operator):
+    return {p: 1j * random.uniform(-5, 5) for p in operator.params()}
+
+
+@pytest.mark.parametrize('cluster_operator,resolver', 
+    [(cluster_operator, random_resolver(cluster_operator))
+        for n_spatial_modes in [2, 3, 4]
+        for cluster_operator in [PairedCoupledClusterOperator(n_spatial_modes)]
+        for _ in range(3)
+        ])
+def test_paired_ucc(cluster_operator, resolver):
+    ansatz = UnitaryCoupledClusterAnsatz(cluster_operator)
 
     circuit = cirq.resolve_parameters(ansatz._circuit, resolver)
-    actual_unitary = circuit.to_unitary_matrix(qubit_order=qubits)
 
-    acquaintance_dag = cca.get_acquaintance_dag(swap_network, initial_mapping)
+    swap_network = cluster_operator.swap_network()
+
+    actual_unitary = circuit.to_unitary_matrix(
+            qubit_order=swap_network.qubit_order)
+
+    acquaintance_dag = cca.get_acquaintance_dag(
+            swap_network.circuit, swap_network.initial_mapping)
     operator = cluster_operator.operator()
     resolved_operator = cirq.resolve_parameters(operator, resolver)
-    hamiltonian = -1j * (resolved_operator - openfermion.hermitian_conjugated(resolved_operator))
+    hamiltonian = -1j * (resolved_operator - 
+            openfermion.hermitian_conjugated(resolved_operator))
     expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
 
     assert np.allclose(actual_unitary, expected_unitary)
