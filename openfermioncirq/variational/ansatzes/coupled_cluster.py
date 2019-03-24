@@ -13,7 +13,7 @@
 import abc
 import collections
 import itertools
-from typing import DefaultDict, Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import cirq
 import cirq.contrib.acquaintance as cca
@@ -42,7 +42,6 @@ class SymbolicTensor(collections.defaultdict):
     def _resolve_parameters_(self, resolver):
         tensor = numpy.zeros(self.shape, dtype = numpy.complex128)
         for key, val in self.items():
-            foo = cirq.resolve_parameters(val, resolver)
             tensor[key] = cirq.resolve_parameters(val, resolver)
         return tensor
 
@@ -111,12 +110,10 @@ class SymbolicInteractionOperator(openfermion.InteractionOperator):
                 self.two_body_tensor, resolver)
         return openfermion.InteractionOperator(
                 constant, one_body_tensor, two_body_tensor)
-        
+
 
 class CoupledClusterOperatorType(metaclass=abc.ABCMeta):
     """A Coupled Cluster operator.
-
-    TODO
     """
 
     @abc.abstractproperty
@@ -130,10 +127,6 @@ class CoupledClusterOperatorType(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def params(self):
         pass
-#       spatial_index_sets = set(tuple(i // 2 for i in indices)
-#               for indices in self.indices_iter())
-#       for indices in spatial_index_sets:
-#           yield LetterWithSubscripts('t', *indices)
 
     @abc.abstractmethod
     def swap_network(self) -> FermionicSwapNetwork:
@@ -142,145 +135,49 @@ class CoupledClusterOperatorType(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def operator(self) -> SymbolicInteractionOperator:
         pass
-#       if max(self.order_iter()) > 2:
-#           raise NotImplementedError()
-#       constant = 0
-#       one_body_tensor = collections.defaultdict(int
-#               ) # type: DefaultDict[OneBodyIndex, Coefficient]
-#       for indices in self.indices_iter(1):
-#           one_body_tensor[indices] += LetterWithSubscripts('t', *indices)
-#       two_body_tensor = collections.defaultdict(int
-#               ) # type: DefaultDict[TwoBodyIndex, Coefficient]
-#       for indices in self.indices_iter(2):
-#           two_body_tensor[indices] += LetterWithSubscripts('t', *indices)
-#       return SymbolicInteractionOperator(
-#               self.n_spin_modes, constant, one_body_tensor, two_body_tensor)
-
-#   def indices_iter(self, order: Optional[int] = None):
-#       pass
-
-#   def order_iter(self):
-#       pass
 
 
 updown_indices = (openfermion.up_index, openfermion.down_index)
 
 
-
 class CoupledClusterOperator(CoupledClusterOperatorType):
     """A Coupled Cluster operator with singles, doubles, etc.
-
-    TODO
     """
 
-#   def __init__(self,
-#           n_spatial_modes: int,
-#           n_occupied_spatial_modes: int,
-#           order: int = 2) -> None:
-#       self._n_spatial_modes = n_spatial_modes
-#       self.n_occupied_spatial_modes = n_occupied_spatial_modes
-#       self.order = order
-
-#   @property
-#   def n_spatial_modes(self):
-#       return self._n_spatial_modes
-
-#   def params(self):
-#       raise NotImplementedError()
-
-#   def operator(self):
-#       raise NotImplementedError()
-
-#   @property
-#   def spatial_modes(self):
-#       return tuple(range(self.n_spatial_modes))
-
-#   @property
-#   def occupied_spatial_modes(self):
-#       return tuple(range(self.n_occupied_spatial_modes))
-
-#   @property
-#   def virtual_spatial_modes(self):
-#       return tuple(range(self.n_occupied_spatial_modes, self.n_spatial_modes))
-
-#   @property
-#   def spin_modes(self):
-#       return tuple(spin(i) for i, spin in
-#               itertools.product(self.spatial_modes, updown_indices))
-
-#   @property
-#   def occupied_spin_modes(self):
-#       return tuple(spin(i) for i, spin in
-#               itertools.product(self.occupied_spatial_modes, updown_indices))
-
-#   @property
-#   def virtual_spin_modes(self):
-#       return tuple(spin(i) for i, spin in
-#               itertools.product(self.virtual_spatial_modes, updown_indices))
-
-#   def order_iter(self):
-#       return range(1, self.order + 1)
-
-#   def indices_iter(self, order = None):
-#       if order is None:
-#           for order in self.order_iter():
-#               yield self.indices_iter(order)
-#       occupied_and_virtual_spin_modes = (
-#               itertools.combinations(spin_modes, order) for spin_modes
-#               in (self.occupied_spin_modes, self.virtual_spin_modes))
-#       for I, J in itertools.product(*occupied_and_virtual_spin_modes):
-#           if sum(i % 2 for i in I) == sum(j % 2 for j in J):
-#               yield I + J
-
-#   @property
-#   def n_spin_modes(self):
-#       return 2 * self.n_spatial_modes
-
-
-class GeneralizedCoupledClusterOperator(CoupledClusterOperatorType):
     def __init__(self,
             n_spatial_modes: int,
-            order: int = 1) -> None:
+            n_occupied_spatial_modes: int,
+            order: int = 2) -> None:
         self._n_spatial_modes = n_spatial_modes
+        self.n_occupied_spatial_modes = n_occupied_spatial_modes
         self.order = order
 
     @property
     def n_spatial_modes(self):
         return self._n_spatial_modes
 
+    @property
+    def occupied_spatial_modes(self):
+        return range(self.n_occupied_spatial_modes)
+
+    @property
+    def virtual_spatial_modes(self):
+        return range(self.n_occupied_spatial_modes, self.n_spatial_modes)
+
     def params(self):
-        raise NotImplementedError()
+        for k in range(1, self.order + 1):
+            occupied_index_sets = (I for I in
+                    itertools.combinations(self.occupied_orbitals, k)
+                    if max(collections.Counter(I).values()) <= 2)
+            virtual_index_sets = (I for I in
+                    itertools.combinations(self.virtual_orbitals, k)
+                    if max(collections.Counter(I).values()) <= 2)
+            for I, J in itertools.product(
+                    virtual_index_sets, occupied_index_sets):
+                yield LetterWithSubscripts('t', *(I + J))
 
     def operator(self):
         raise NotImplementedError()
-
-    def swap_network(self):
-        raise NotImplementedError()
-
-#   def order_iter(self):
-#       return range(1, self.order + 1)
-
-#   @property
-#   def spatial_modes(self):
-#       return tuple(range(self.n_spatial_modes))
-
-#   @property
-#   def spin_modes(self):
-#       return tuple(spin(i) for i, spin in
-#               itertools.product(self.spatial_modes, updown_indices))
-
-#   def indices_iter(self, order = None):
-#       if order is None:
-#           for order in self.order_iter():
-#               yield self.indices_iter(order)
-#       spin_modes = itertools.combinations(self.spin_modes, order)
-#       for I, J in itertools.combinations(spin_modes, 2):
-#           if sum(i % 2 for i in I) == sum(j % 2 for j in J):
-#               yield I + J
-
-#   @property
-#   def n_spin_modes(self):
-#       return 2 * self.n_spatial_modes
 
 
 class PairedCoupledClusterOperator(CoupledClusterOperatorType):
@@ -316,44 +213,21 @@ class PairedCoupledClusterOperator(CoupledClusterOperatorType):
         n_qubits = 2 * self.n_spatial_modes
 
         qubits = cirq.LineQubit.range(n_qubits)
-        qubit_pairs = [qubits[2 * i: 2 * (i + 1)] for i in range(self.n_spatial_modes)]
+        qubit_pairs = [qubits[2 * i: 2 * (i + 1)]
+                for i in range(self.n_spatial_modes)]
         circuit, qubit_order = cca.quartic_paired_acquaintance_strategy(
                 qubit_pairs, FSWAP)
         qubit_mapping = dict(zip(qubit_order, qubits))
         circuit = circuit.with_device(circuit.device, qubit_mapping.get)
         initial_permutation = {l.x: i for i, l in enumerate(qubit_order)}
-        initial_permutation_gate = cca.LinearPermutationGate(n_qubits, initial_permutation, swap_gate = FSWAP)
+        initial_permutation_gate = cca.LinearPermutationGate(
+                n_qubits, initial_permutation, swap_gate = FSWAP)
         circuit.insert(0, initial_permutation_gate(*qubits))
         initial_mapping = {q: i for i, q in enumerate(qubits)}
 
         cca.return_to_initial_mapping(circuit, FSWAP)
 
         return FermionicSwapNetwork(circuit, initial_mapping, qubits)
-
-
-#   def order_iter(self):
-#       return (1, 2)
-
-#   @property
-#   def spatial_modes(self):
-#       return range(self.n_spatial_modes)
-
-#   def indices_iter(self, order = None):
-#       if order is None:
-#           for order in self.order_iter():
-#               for indices in self.indices_iter(order):
-#                   yield indices
-#       elif order == 1:
-#           for i in self.spatial_modes:
-#               for spin in updown_indices:
-#                   yield (spin(i),) * 2
-#       elif order == 2:
-#           for ij in itertools.combinations(self.spatial_modes, 2):
-#               yield tuple(spin(i) for i in ij for spin in updown_indices)
-
-#   @property
-#   def n_spin_modes(self):
-#       return 2 * self.n_spatial_modes
 
 
 class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
@@ -370,10 +244,12 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
 
         self.cluster_operator = cluster_operator
         operator = self.cluster_operator.operator()
-        exponent = -1j * (operator - openfermion.hermitian_conjugated(operator))
+        exponent = -1j * (
+                operator - openfermion.hermitian_conjugated(operator))
         gates = trotterize(exponent)
         swap_network = cluster_operator.swap_network()
-        execution_strategy(gates, swap_network.initial_mapping)(swap_network.circuit)
+        execution_strategy(gates, swap_network.initial_mapping)(
+                swap_network.circuit)
         self._circuit = swap_network.circuit
 
         super().__init__(**kwargs)

@@ -10,7 +10,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import collections
 import itertools
 import random
 
@@ -21,24 +20,16 @@ import openfermion
 
 import pytest
 
-import openfermioncirq as ofc
 from openfermioncirq.primitives.general_swap_network import (
-    trotterize, trotter_unitary)
-from openfermioncirq.variational.letter_with_subscripts import LetterWithSubscripts
+    trotter_unitary)
 from openfermioncirq.variational.ansatzes.coupled_cluster import (
-    CoupledClusterOperator, GeneralizedCoupledClusterOperator,
+    CoupledClusterOperator,
     PairedCoupledClusterOperator,
     UnitaryCoupledClusterAnsatz)
 
+
 def test_cc_operator():
     pass
-#   operator = CoupledClusterOperator(7, 3)
-#   operator.operator()
-
-def test_generalized_cc_operator():
-    pass
-#   operator = GeneralizedCoupledClusterOperator(5)
-#   operator.operator()
 
 
 @pytest.mark.parametrize('n_spatial_modes',
@@ -74,7 +65,7 @@ def random_resolver(operator):
     return {p: 1j * random.uniform(-5, 5) for p in operator.params()}
 
 
-@pytest.mark.parametrize('cluster_operator,resolver', 
+@pytest.mark.parametrize('cluster_operator,resolver',
     [(cluster_operator, random_resolver(cluster_operator))
         for n_spatial_modes in [2, 3, 4]
         for cluster_operator in [PairedCoupledClusterOperator(n_spatial_modes)]
@@ -94,7 +85,7 @@ def test_paired_ucc(cluster_operator, resolver):
             swap_network.circuit, swap_network.initial_mapping)
     operator = cluster_operator.operator()
     resolved_operator = cirq.resolve_parameters(operator, resolver)
-    hamiltonian = -1j * (resolved_operator - 
+    hamiltonian = -1j * (resolved_operator -
             openfermion.hermitian_conjugated(resolved_operator))
     expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
 
