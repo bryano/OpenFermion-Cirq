@@ -32,17 +32,19 @@ def square_lattice_acquaintance_strategy(
         subgraph: BipartiteGraphType=BipartiteGraphType.COMPLETE,
         ) -> circuits.Circuit:
     """
-    Returns an acquaintance strategy ... TODO
+    Returns an acquaintance strategy for a 2D lattice with multiple qubits per
+    site.
 
     Args:
         shape: The dimensions of the square lattice.
         qubit_order: The qubits on which the strategy should be defined.
-        qubits_per_site: TODO
-        swap_gate: TODO
-        BipartiteGraphType: TODO
+        qubits_per_site: The number of qubits per site.
+        swap_gate: The gate to use when decomposing. 
+        BipartiteGraphType: The graph indicating which pairs of qubits in
+            adjacent sites are to be acquainted.
 
     Returns:
-        TODO
+        The acquaintance strategy as a Circuit.
     """
     width, height = shape
     n_sites = width * height
@@ -50,7 +52,8 @@ def square_lattice_acquaintance_strategy(
     if n_qubits != len(qubit_order):
         raise ValueError('width * height * qubits_per_site != len(qubits)')
 
-    shift_gate = CircularShiftGate(qubits_per_site, swap_gate)
+    shift_op = lambda qubits: CircularShiftGate(
+            len(qubits), qubits_per_site, swap_gate)(*qubits)
     bipartite_acquaintance_gate = BipartiteSwapNetworkGate(
             subgraph=subgraph, part_size=qubits_per_site, swap_gate=swap_gate)
 
@@ -69,7 +72,7 @@ def square_lattice_acquaintance_strategy(
                     continue
             qubits = qubit_order[qubits_per_site * x: qubits_per_site * (x + 2)]
             if (x + 1) % width:
-                operations.append(shift_gate(*qubits))
+                operations.append(shift_op(qubits))
             else:
                 operations.append(bipartite_acquaintance_gate(*qubits))
         strategy._moments.append(ops.Moment(operations))

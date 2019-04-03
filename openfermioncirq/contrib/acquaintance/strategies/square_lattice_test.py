@@ -730,6 +730,7 @@ def test_square_lattice_diagrams(shape):
     qubits = cirq.LineQubit.range(n_qubits)
     strategy = square_lattice_acquaintance_strategy(shape, qubit_order=qubits)
     expander(strategy)
+    cirq.DropEmptyMoments()(strategy)
     expected_diagram = diagrams[shape]
     cirq.testing.assert_has_diagram(strategy, expected_diagram)
 
@@ -744,7 +745,6 @@ def test_square_lattice_acquaintance_opportunities(
     qubits = cirq.LineQubit.range(n_qubits)
     strategy = square_lattice_acquaintance_strategy(shape, qubit_order=qubits,
             qubits_per_site=qubits_per_site, subgraph=subgraph)
-    expander(strategy)
     initial_mapping = {q: i for i, q in enumerate(qubits)}
     opportunities = get_logical_acquaintance_opportunities(
             strategy, initial_mapping)
