@@ -72,6 +72,6 @@ def square_lattice_acquaintance_strategy(
                 operations.append(shift_gate(*qubits))
             else:
                 operations.append(bipartite_acquaintance_gate(*qubits))
-        strategy._moments.append(circuits.Moment(operations))
+        strategy._moments.append(ops.Moment(operations))
 
     return strategy
