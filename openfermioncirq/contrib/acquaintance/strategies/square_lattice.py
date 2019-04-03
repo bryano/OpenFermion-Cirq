@@ -19,7 +19,6 @@ from typing import Sequence, Tuple
 from cirq import circuits, ops
 
 from cirq.contrib.acquaintance.devices import UnconstrainedAcquaintanceDevice
-from cirq.contrib.acquaintance.gates import SwapNetworkGate
 from cirq.contrib.acquaintance.shift import CircularShiftGate
 from cirq.contrib.acquaintance.bipartite import (
         BipartiteSwapNetworkGate, BipartiteGraphType)

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import itertools
-import random
 from typing import FrozenSet, Set, Tuple
 
 import pytest
@@ -26,8 +25,6 @@ from cirq.contrib.acquaintance.gates import (
         AcquaintanceOpportunityGate)
 from cirq.contrib.acquaintance.inspection_utils import (
         get_logical_acquaintance_opportunities)
-from cirq.contrib.acquaintance.mutation_utils import (
-        expose_acquaintance_gates)
 from cirq.contrib.acquaintance.permutation import (
         LogicalIndex, SwapPermutationGate)
 from openfermioncirq.contrib.acquaintance.strategies.square_lattice import (
@@ -42,18 +39,18 @@ def square_lattice_expected_acquaintance_opportunities(
     opportunities = set()
     for row in range(height - 1):
         threshold = (
-            0 if height == 2 else 
+            0 if height == 2 else
             width // 2 if row == 0 else
-            (width + (row % 2)) // 2 if row == height - 2 else 
+            (width + (row % 2)) // 2 if row == height - 2 else
             0)
-        left_sites_within_row = itertools.chain(reversed(range(threshold)), 
+        left_sites_within_row = itertools.chain(reversed(range(threshold)),
                                                 range(threshold, width))
         left_site_offsets = (qubits_per_site * (width * row + site_within_row)
                              for site_within_row in left_sites_within_row)
         step = lambda ds: -1 if ds < threshold else 1
         left_qubits_by_site = ((site_offset + qubit_offset for qubit_offset in
                                 range(qubits_per_site)[::step(site_within_row)])
-                               for site_within_row, site_offset 
+                               for site_within_row, site_offset
                                in enumerate(left_site_offsets))
         right_sites_within_row = range(2 * width - 1, width - 1, -1)
         right_site_offsets = (qubits_per_site * (width * row + site_within_row)
@@ -75,6 +72,7 @@ no_decomp = (lambda op: isinstance(op.gate,
     (AcquaintanceOpportunityGate, SwapPermutationGate)))
 expander = cirq.ExpandComposite(no_decomp=no_decomp)
 
+# pragma pylint: disable=line-too-long
 diagrams = {
     (2, 2):
 """
@@ -721,6 +719,7 @@ diagrams = {
 20: ───────────────────────────────────────────1↦0─────────────────────────────────────
 """
 }
+# pragma pylint: enable=line-too-long
 
 
 @pytest.mark.parametrize('shape', diagrams)
