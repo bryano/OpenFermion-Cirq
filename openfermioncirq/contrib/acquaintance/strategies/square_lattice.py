@@ -26,7 +26,7 @@ from cirq.contrib.acquaintance.bipartite import (
 
 def square_lattice_acquaintance_strategy(
         shape: Tuple[int, int],
-        qubit_order: Sequence[ops.QubitId],
+        qubit_order: Sequence[ops.Qid],
         qubits_per_site: int=1,
         swap_gate: ops.Gate=ops.SWAP,
         subgraph: BipartiteGraphType=BipartiteGraphType.COMPLETE,
