@@ -30,6 +30,10 @@ from cirq.contrib.acquaintance.permutation import (
 from openfermioncirq.primitives.swap_networks import (
         square_lattice_acquaintance_strategy)
 
+def test_square_lattice_acquaintance_strategy_inconsistent_shape():
+    with pytest.raises(ValueError):
+        square_lattice_acquaintance_strategy((2, 3), cirq.LineQubit.range(5))
+
 def square_lattice_expected_acquaintance_opportunities(
         shape: Tuple[int, int],
         qubits_per_site: int=1,
