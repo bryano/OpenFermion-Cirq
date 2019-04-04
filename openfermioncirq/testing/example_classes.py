@@ -139,6 +139,9 @@ class ExampleVariationalObjective(VariationalObjective):
                                     cirq.SimulationTrialResult,
                                     numpy.ndarray]
               ) -> float:
+        if isinstance(circuit_output, numpy.ndarray):
+            return sum(bin(i).count('1') * p for i, p in
+                    enumerate(circuit_output))
         measurements = circuit_output.measurements['all']
         return numpy.sum(measurements)
 
