@@ -212,9 +212,12 @@ def test_combined_cxxyy_consistency_special(exponent, control):
     (np.random.uniform(-5, 5, 3), np.random.uniform(-5, 5)) for _ in range(5)])
 def test_combined_cxxyy_consistency_docstring(weights, exponent):
     generator = np.zeros((8, 8))
-    generator[6, 5] = generator[5, 6] = weights[0] # w0 * (|110><101| + |101><110|)
-    generator[6, 3] = generator[3, 6] = weights[1] # w1 * (|110><011| + |011><110|)
-    generator[5, 3] = generator[3, 5] = weights[2] # w2 * (|101><011| + |011><101|)
+    # w0 * (|110><101| + |101><110|)
+    generator[6, 5] = generator[5, 6] = weights[0]
+    # w1 * (|110><011| + |011><110|)
+    generator[6, 3] = generator[3, 6] = weights[1]
+    # w2 * (|101><011| + |011><101|)
+    generator[5, 3] = generator[3, 5] = weights[2]
     expected_unitary = la.expm(-0.5j * exponent * np.pi * generator)
 
     gate  = ofc.CombinedCXXYYPowGate(weights, exponent=exponent)
