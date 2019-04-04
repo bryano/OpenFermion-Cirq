@@ -27,7 +27,7 @@ from cirq.contrib.acquaintance.inspection_utils import (
         get_logical_acquaintance_opportunities)
 from cirq.contrib.acquaintance.permutation import (
         LogicalIndex, SwapPermutationGate)
-from openfermioncirq.contrib.acquaintance.strategies.square_lattice import (
+from openfermioncirq.primitives.swap_networks import (
         square_lattice_acquaintance_strategy)
 
 def square_lattice_expected_acquaintance_opportunities(
@@ -36,7 +36,7 @@ def square_lattice_expected_acquaintance_opportunities(
         subgraph: BipartiteGraphType=BipartiteGraphType.COMPLETE
         ) -> Set[FrozenSet[LogicalIndex]]:
     width, height = shape
-    opportunities = set()
+    opportunities = set() # type: Set[FrozenSet[int]]
     for row in range(height - 1):
         threshold = (
             0 if height == 2 else
