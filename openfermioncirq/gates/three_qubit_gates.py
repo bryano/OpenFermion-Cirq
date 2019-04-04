@@ -171,7 +171,6 @@ class CombinedCXXYYPowGate(
         for ij, w in zip([(1, 2), (0, 2), (0, 1)], self.weights):
             nontrivial_part[ij] = nontrivial_part[ij[::-1]] = w
         eig_vals, eig_vecs = np.linalg.eigh(nontrivial_part)
-        print(nontrivial_part)
         for eig_val, eig_vec in zip(eig_vals, eig_vecs.T):
             exp_factor = -0.5 * eig_val
             proj = np.zeros((8, 8))

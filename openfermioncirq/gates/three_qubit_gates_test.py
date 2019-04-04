@@ -14,6 +14,7 @@ import itertools
 
 import numpy as np
 import pytest
+import scipy.linalg as la
 import sympy
 
 import cirq
@@ -192,7 +193,7 @@ def test_combined_cxxyy():
     itertools.product(
         [0, 1, -1, 0.25, -0.5, 0.1],
         [0, 1, 2]))
-def test_combined_cxxyy_consistency(exponent, control):
+def test_combined_cxxyy_consistency_special(exponent, control):
     weights = tuple(np.eye(1, 3, control)[0])
     general_gate  = ofc.CombinedCXXYYPowGate(weights, exponent=exponent)
     general_unitary = cirq.unitary(general_gate)
@@ -205,3 +206,18 @@ def test_combined_cxxyy_consistency(exponent, control):
             cirq.unitary(special_gate)[indices[:, np.newaxis], indices])
 
     assert np.allclose(general_unitary, special_unitary)
+
+
+@pytest.mark.parametrize('weights,exponent', [
+    (np.random.uniform(-5, 5, 3), np.random.uniform(-5, 5)) for _ in range(5)])
+def test_combined_cxxyy_consistency_docstring(weights, exponent):
+    generator = np.zeros((8, 8))
+    generator[6, 5] = generator[5, 6] = weights[0] # w0 * (|110><101| + |101><110|)
+    generator[6, 3] = generator[3, 6] = weights[1] # w1 * (|110><011| + |011><110|)
+    generator[5, 3] = generator[3, 5] = weights[2] # w2 * (|101><011| + |011><101|)
+    expected_unitary = la.expm(-0.5j * exponent * np.pi * generator)
+
+    gate  = ofc.CombinedCXXYYPowGate(weights, exponent=exponent)
+    actual_unitary = cirq.unitary(gate)
+
+    assert np.allclose(expected_unitary, actual_unitary)
