@@ -734,8 +734,10 @@ def test_square_lattice_diagrams(shape):
     cirq.testing.assert_has_diagram(strategy, expected_diagram)
 
 
-@pytest.mark.parametrize('shape,qubits_per_site,subgraph', 
-    itertools.product(itertools.product(range(1, 10), range(1, 6)), range(1, 5), BipartiteGraphType)
+@pytest.mark.parametrize('shape,qubits_per_site,subgraph',
+    itertools.product(
+        itertools.product(range(1, 10), range(1, 6)),
+        range(1, 5), BipartiteGraphType)
 )
 def test_square_lattice_acquaintance_opportunities(
         shape, qubits_per_site, subgraph):

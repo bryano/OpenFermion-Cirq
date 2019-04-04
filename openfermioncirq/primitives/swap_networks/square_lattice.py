@@ -38,7 +38,7 @@ def square_lattice_acquaintance_strategy(
         shape: The dimensions of the square lattice.
         qubit_order: The qubits on which the strategy should be defined.
         qubits_per_site: The number of qubits per site.
-        swap_gate: The gate to use when decomposing. 
+        swap_gate: The gate to use when decomposing.
         BipartiteGraphType: The graph indicating which pairs of qubits in
             adjacent sites are to be acquainted.
 
