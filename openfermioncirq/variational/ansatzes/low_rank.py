@@ -311,7 +311,8 @@ class LowRankTrotterAnsatz(VariationalAnsatz):
                         + interpolation_progress * self.one_body_correction)
                 quad_ham = openfermion.QuadraticHamiltonian(
                         one_body_coefficients)
-                one_body_energies, _ = quad_ham.orbital_energies()
+                one_body_energies, _, _ = (
+                        quad_ham.diagonalizing_bogoliubov_transform())
                 params.append(_canonicalize_exponent(
                     -one_body_energies[p]
                     * step_time / numpy.pi, 2))
