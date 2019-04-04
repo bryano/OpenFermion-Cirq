@@ -27,8 +27,12 @@ from cirq.contrib.acquaintance.inspection_utils import (
         get_logical_acquaintance_opportunities)
 from cirq.contrib.acquaintance.permutation import (
         LogicalIndex, SwapPermutationGate)
-from openfermioncirq.contrib.acquaintance.strategies.square_lattice import (
+from openfermioncirq.primitives.swap_networks import (
         square_lattice_acquaintance_strategy)
+
+def test_square_lattice_acquaintance_strategy_inconsistent_shape():
+    with pytest.raises(ValueError):
+        square_lattice_acquaintance_strategy((2, 3), cirq.LineQubit.range(5))
 
 def square_lattice_expected_acquaintance_opportunities(
         shape: Tuple[int, int],
@@ -36,7 +40,7 @@ def square_lattice_expected_acquaintance_opportunities(
         subgraph: BipartiteGraphType=BipartiteGraphType.COMPLETE
         ) -> Set[FrozenSet[LogicalIndex]]:
     width, height = shape
-    opportunities = set()
+    opportunities = set() # type: Set[FrozenSet[int]]
     for row in range(height - 1):
         threshold = (
             0 if height == 2 else
@@ -734,8 +738,10 @@ def test_square_lattice_diagrams(shape):
     cirq.testing.assert_has_diagram(strategy, expected_diagram)
 
 
-@pytest.mark.parametrize('shape,qubits_per_site,subgraph', 
-    itertools.product(itertools.product(range(1, 10), range(1, 6)), range(1, 5), BipartiteGraphType)
+@pytest.mark.parametrize('shape,qubits_per_site,subgraph',
+    itertools.product(
+        itertools.product(range(1, 10), range(1, 6)),
+        range(1, 5), BipartiteGraphType)
 )
 def test_square_lattice_acquaintance_opportunities(
         shape, qubits_per_site, subgraph):
