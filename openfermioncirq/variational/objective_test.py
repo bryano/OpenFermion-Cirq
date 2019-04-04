@@ -26,7 +26,7 @@ test_objective_noisy = ExampleVariationalObjectiveNoisy()
 
 
 def test_variational_objective_value():
-    simulator = cirq.google.XmonSimulator()
+    simulator = cirq.Simulator()
     n_qubits = 4
     qubits = cirq.LineQubit.range(n_qubits)
     circuit = cirq.Circuit.from_ops(
