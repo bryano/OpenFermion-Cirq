@@ -27,6 +27,9 @@ from openfermioncirq.variational.ansatzes.coupled_cluster import (
     PairedCoupledClusterOperator,
     UnitaryCoupledClusterAnsatz)
 
+from openfermioncirq.optimization import COBYLA, OptimizationParams
+from openfermioncirq import VariationalStudy
+from openfermioncirq import HamiltonianObjective
 
 def test_cc_operator():
     pass
@@ -35,16 +38,19 @@ def test_cc_operator():
 @pytest.mark.parametrize('n_spatial_modes',
     range(2, 7))
 def test_paired_cc_operator(n_spatial_modes):
-    operator = PairedCoupledClusterOperator(n_spatial_modes)
-    params = list(operator.params())
-    assert len(set(params)) == len(params)
-    assert len(params) == n_spatial_modes * (n_spatial_modes - 1)
-    T = operator.operator()
-    H = T - openfermion.hermitian_conjugated(T)
-    resolver = {p: random.uniform(-5, 5) for p in operator.params()}
-    H = cirq.resolve_parameters(H, resolver)
-    exponent = 1j * H
-    assert openfermion.is_hermitian(exponent)
+    for kwargs in (dict(zip(['include_real_part', 'include_imag_part'], flags))
+            for flags in itertools.product((True, False), repeat=2)):
+        operator = PairedCoupledClusterOperator(n_spatial_modes, **kwargs)
+        params = list(operator.params())
+        assert len(set(params)) == len(params)
+        assert len(params) == (
+                n_spatial_modes * (n_spatial_modes - 1) * sum(kwargs.values()))
+        T = operator.operator()
+        H = T - openfermion.hermitian_conjugated(T)
+        resolver = {p: random.uniform(-5, 5) for p in operator.params()}
+        H = cirq.resolve_parameters(H, resolver)
+        exponent = 1j * H
+        assert (not exponent) or openfermion.is_hermitian(exponent)
 
 
 def print_hermitian_matrices(*matrices):
@@ -62,13 +68,14 @@ def print_hermitian_matrices(*matrices):
 
 
 def random_resolver(operator):
-    return {p: 1j * random.uniform(-5, 5) for p in operator.params()}
+    return {p: random.uniform(-5, 5) for p in operator.params()}
 
 
 @pytest.mark.parametrize('cluster_operator,resolver',
     [(cluster_operator, random_resolver(cluster_operator))
         for n_spatial_modes in [2, 3, 4]
-        for cluster_operator in [PairedCoupledClusterOperator(n_spatial_modes)]
+        for cluster_operator in [PairedCoupledClusterOperator(n_spatial_modes,
+            include_real_part=False)]
         for _ in range(3)
         ])
 def test_paired_ucc(cluster_operator, resolver):
@@ -90,3 +97,48 @@ def test_paired_ucc(cluster_operator, resolver):
     expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
 
     assert np.allclose(actual_unitary, expected_unitary)
+
+def test_integration_paired_ucc():
+    diatomic_bond_length = .7414
+    geometry = [('H', (0., 0., 0.)), 
+                ('H', (0., 0., diatomic_bond_length))]
+    basis = 'sto-3g'
+    multiplicity = 1
+    charge = 0
+    description = format(diatomic_bond_length)
+
+    molecule = openfermion.MolecularData(
+        geometry,
+        basis,
+        multiplicity,
+        description=description)
+    molecule.load()
+
+    hamiltonian = molecule.get_molecular_hamiltonian()
+
+    n_spatial_modes = 2
+    cluster_operator = PairedCoupledClusterOperator(
+            n_spatial_modes, include_real_part=False)
+    ansatz = UnitaryCoupledClusterAnsatz(cluster_operator)
+
+    objective = HamiltonianObjective(hamiltonian)
+
+    q0, q1, _, _ = ansatz.qubits
+    preparation_circuit = cirq.Circuit.from_ops(
+        cirq.X(q0),
+        cirq.X(q1))
+    study = VariationalStudy(
+        name='my_hydrogen_study',
+        ansatz=ansatz,
+        objective=objective,
+        preparation_circuit=preparation_circuit)
+
+    initial_guess = [0.01 for _ in ansatz.params()]
+    optimization_params = OptimizationParams(
+        algorithm=COBYLA,
+        initial_guess=initial_guess)
+    result = study.optimize(optimization_params)
+
+    # Pretty loose testing conditions here but it is a start.
+    assert result.optimal_value <= 0.9 * molecule.hf_energy
+    assert result.optimal_value >= molecule.fci_energy

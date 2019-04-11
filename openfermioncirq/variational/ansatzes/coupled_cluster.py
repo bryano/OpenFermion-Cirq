@@ -48,6 +48,9 @@ class SymbolicTensor(collections.defaultdict):
     def _is_parameterized_(self):
         return any(cirq.is_parameterized(val) for val in self.values())
 
+    def __bool__(self):
+        return any(self.values())
+
     def __len__(self):
         return self.shape[0]
 
@@ -110,6 +113,10 @@ class SymbolicInteractionOperator(openfermion.InteractionOperator):
                 self.two_body_tensor, resolver)
         return openfermion.InteractionOperator(
                 constant, one_body_tensor, two_body_tensor)
+
+    def __bool__(self):
+        return any(bool(tensor) for tensor in self.n_body_tensors.values())
+
 
 
 class CoupledClusterOperatorType(metaclass=abc.ABCMeta):
@@ -181,8 +188,18 @@ class CoupledClusterOperator(CoupledClusterOperatorType):
 
 
 class PairedCoupledClusterOperator(CoupledClusterOperatorType):
-    def __init__(self, n_spatial_modes: int) -> None:
+    def __init__(self,
+            n_spatial_modes: int,
+            include_real_part: bool = True,
+            include_imag_part: bool = True
+            ) -> None:
         self._n_spatial_modes = n_spatial_modes
+        complex_parts = {} # type: Dict[str, complex]
+        if include_real_part:
+            complex_parts['re'] = 1
+        if include_imag_part:
+            complex_parts['im'] = 1j
+        self.complex_parts = complex_parts
 
     @property
     def n_spatial_modes(self):
@@ -190,8 +207,9 @@ class PairedCoupledClusterOperator(CoupledClusterOperatorType):
 
     def params(self):
         for i, j in itertools.combinations(range(self.n_spatial_modes), 2):
-            yield LetterWithSubscripts('t', i, j)
-            yield LetterWithSubscripts('t', i, i, j, j)
+            for part in self.complex_parts:
+                yield LetterWithSubscripts('t', part, i, j)
+                yield LetterWithSubscripts('t', part, i, i, j, j)
 
     def operator(self):
         constant = 0
@@ -199,10 +217,12 @@ class PairedCoupledClusterOperator(CoupledClusterOperatorType):
         two_body_tensor = SymbolicTensor((self.n_spin_modes,) * 4, int)
 
         for i, j in itertools.combinations(range(self.n_spatial_modes), 2):
-            param = LetterWithSubscripts('t', i, j)
+            param = sum(v * LetterWithSubscripts('t', part, i, j)
+                    for part, v in self.complex_parts.items())
             for spin in updown_indices:
                 one_body_tensor[spin(i), spin(j)] += param
-            param = LetterWithSubscripts('t', i, i, j, j)
+            param = sum(v * LetterWithSubscripts('t', part, i, i, j, j)
+                    for part, v in self.complex_parts.items())
             indices = tuple(spin(k) for k in (i, j) for spin in updown_indices)
             two_body_tensor[indices] += param
 
@@ -256,6 +276,9 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
 
     def params(self):
         return self.cluster_operator.params()
+
+    def default_initial_params(self):
+        return numpy.zeros(len(list(self.params())))
 
     def operations(self, qubits):
         func = lambda q: qubits[q.x]
