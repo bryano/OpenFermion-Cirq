@@ -277,6 +277,9 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
     def params(self):
         return self.cluster_operator.params()
 
+    def default_initial_params(self):
+        return numpy.zeros(len(list(self.params())))
+
     def operations(self, qubits):
         func = lambda q: qubits[q.x]
         for op in self._circuit.all_operations():
