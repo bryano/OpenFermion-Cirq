@@ -148,16 +148,16 @@ class CombinedCXXYYPowGate(
 
     With weights (w0, w1, w2) and exponent t, this gate's matrix is defined as
     follows:
-        exp(-i π 0.5 t (w0 * (|110><101| + |101><110|) +
-                        w1 * (|110><011| + |011><110|) +
-                        w2 * (|101><011| + |011><101|)))
+        exp(-i π 0.5 t (w0 |110><101| + h.c.) +
+                        w1 |110><011| + h.c.) +
+                        w2 |101><011| + h.c.)))
 
     Args:
         weights: The weights of the terms in the Hamiltonian.
     """
 
     def __init__(self,
-                 weights: Tuple[float, float, float]=(1., 1., 1.),
+                 weights: Tuple[complex, complex, complex]=(1., 1., 1.),
                  **kwargs) -> None:
 
         assert len(weights) == 3
@@ -167,21 +167,24 @@ class CombinedCXXYYPowGate(
 
     def _eigen_components(self):
         components = [(0, np.diag([1, 1, 1, 0, 1, 0, 0, 1]))]
-        nontrivial_part = np.zeros((3, 3))
+        nontrivial_part = np.zeros((3, 3), dtype=np.complex128)
         for ij, w in zip([(1, 2), (0, 2), (0, 1)], self.weights):
-            nontrivial_part[ij] = nontrivial_part[ij[::-1]] = w
+            nontrivial_part[ij] = w
+            nontrivial_part[ij[::-1]] = w.conjugate()
+        assert(np.allclose(nontrivial_part, nontrivial_part.conj().T))
         eig_vals, eig_vecs = np.linalg.eigh(nontrivial_part)
         for eig_val, eig_vec in zip(eig_vals, eig_vecs.T):
             exp_factor = -0.5 * eig_val
-            proj = np.zeros((8, 8))
+            proj = np.zeros((8, 8), dtype=np.complex128)
             nontrivial_indices = np.array([3, 5, 6], dtype=np.intp)
             proj[nontrivial_indices[:, np.newaxis], nontrivial_indices] = (
-                    np.outer(eig_vec, eig_vec))
+                    np.outer(eig_vec.conjugate(), eig_vec))
             components.append((exp_factor, proj))
         return components
 
     def _value_equality_values_(self):
-        return tuple(cirq.PeriodicValue(w * self.exponent, 4)
+        return tuple(
+                (cirq.PeriodicValue(abs(w) * self.exponent, 4), _arg(w))
                      for w in self.weights)
 
     def _is_parameterized_(self) -> bool:
@@ -189,7 +192,8 @@ class CombinedCXXYYPowGate(
                 (isinstance(v, cirq.PeriodicValue) and
                     any(isinstance(vv, sympy.Basic)
                         for vv in (v.value, v.period)))
-                for v in self._value_equality_values_())
+                for V in self._value_equality_values_()
+                for v in V)
 
     def __repr__(self):
         return (
@@ -198,3 +202,12 @@ class CombinedCXXYYPowGate(
             ('' if self.exponent == 1 else
              (', exponent=' + proper_repr(self.exponent))) +
             ')')
+
+def _arg(x):
+    if x == 0:
+        return 0
+    if cirq.is_parameterized(x):
+        return sympy.arg(x)
+    return np.angle(x)
+
+
