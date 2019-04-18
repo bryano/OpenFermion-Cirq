@@ -23,7 +23,7 @@ from openfermioncirq.gates.common_gates import (
     XXYYPowGate,
     YXXY,
     YXXYPowGate,
-    CombinedSwapAndZ)
+    QuadraticFermionicSimulationGate)
 
 from openfermioncirq.gates.three_qubit_gates import (
     CRxxyy,
@@ -33,7 +33,7 @@ from openfermioncirq.gates.three_qubit_gates import (
     CXXYYPowGate,
     CYXXYPowGate,
     rot111,
-    CombinedCXXYYPowGate)
+    CubicFermionicSimulationGate)
 
 from openfermioncirq.gates.four_qubit_gates import (
     DoubleExcitation,

@@ -31,8 +31,8 @@ from openfermioncirq.gates import (
     XXYYPowGate,
     YXXY,
     YXXYPowGate,
-    CombinedSwapAndZ,
-    CombinedCXXYYPowGate
+    QuadraticFermionicSimulationGate,
+    CubicFermionicSimulationGate
 )
 
 from openfermioncirq.primitives import (

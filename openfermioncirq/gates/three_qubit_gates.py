@@ -141,7 +141,7 @@ CYXXY = CYXXYPowGate()
 
 
 @cirq.value_equality(approximate=True)
-class CombinedCXXYYPowGate(
+class CubicFermionicSimulationGate(
         cirq.EigenGate,
         cirq.ThreeQubitGate):
     """w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
@@ -197,7 +197,7 @@ class CombinedCXXYYPowGate(
 
     def __repr__(self):
         return (
-            'ofc.CombinedCXXYYPowGate(' +
+            'ofc.CubicFermionicSimulationGate(' +
             '({})'.format(' ,'.join(proper_repr(w) for w in self.weights)) +
             ('' if self.exponent == 1 else
              (', exponent=' + proper_repr(self.exponent))) +

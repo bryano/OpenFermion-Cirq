@@ -254,7 +254,7 @@ FSWAP = FSwapPowGate()
 XXYY = XXYYPowGate()
 YXXY = YXXYPowGate()
 
-class CombinedSwapAndZ(
+class QuadraticFermionicSimulationGate(
         cirq.EigenGate,
         cirq.InterchangeableQubitsGate,
         cirq.TwoQubitGate):
@@ -267,7 +267,6 @@ class CombinedSwapAndZ(
                  weights: Tuple[float, float]=(1, 1),
                  **kwargs) -> None:
 
-        assert len(weights) == 2
         self.weights = weights
 
         super().__init__(**kwargs)
@@ -296,6 +295,6 @@ class CombinedSwapAndZ(
     def __repr__(self):
         exponent_str = ('' if self.exponent == 1 else
                 ', exponent=' + cirq._compat.proper_repr(self.exponent))
-        return ('ofc.CombinedSwapAndZ(({}){})'.format(
+        return ('ofc.QuadraticFermionicSimulationGate(({}){})'.format(
                 ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
                 exponent_str))

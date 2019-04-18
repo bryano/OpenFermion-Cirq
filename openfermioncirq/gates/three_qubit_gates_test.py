@@ -185,25 +185,26 @@ c: ───XXYY^-0.5───#2^-0.5───
 """)
 
 
-def test_combined_cxxyy():
+def test_cubic_fermionic_simulation_gate():
     ofc.testing.assert_eigengate_implements_consistent_protocols(
-        ofc.CombinedCXXYYPowGate)
+        ofc.CubicFermionicSimulationGate)
 
 
-def test_combined_cxxyy_equality():
+def test_cubic_fermionic_simulation_gate_equality():
     eq = EqualsTester()
     eq.add_equality_group(
-        ofc.CombinedCXXYYPowGate() ** 0.5,
-        ofc.CombinedCXXYYPowGate((1,) * 3, exponent=0.5),
-        ofc.CombinedCXXYYPowGate((0.5,) * 3)
+        ofc.CubicFermionicSimulationGate() ** 0.5,
+        ofc.CubicFermionicSimulationGate((1,) * 3, exponent=0.5),
+        ofc.CubicFermionicSimulationGate((0.5,) * 3)
         )
     eq.add_equality_group(
-        ofc.CombinedCXXYYPowGate((1j, 0, 0)),
-        ofc.CombinedCXXYYPowGate((5j, 0, 0))
+        ofc.CubicFermionicSimulationGate((1j, 0, 0)),
+        ofc.CubicFermionicSimulationGate((5j, 0, 0))
         )
     eq.add_equality_group(
-        ofc.CombinedCXXYYPowGate((sympy.Symbol('s'), 0, 0), exponent=2),
-        ofc.CombinedCXXYYPowGate((2 * sympy.Symbol('s'), 0, 0), exponent=1)
+        ofc.CubicFermionicSimulationGate((sympy.Symbol('s'), 0, 0), exponent=2),
+        ofc.CubicFermionicSimulationGate(
+            (2 * sympy.Symbol('s'), 0, 0), exponent=1)
         )
 
 
@@ -211,9 +212,9 @@ def test_combined_cxxyy_equality():
     itertools.product(
         [0, 1, -1, 0.25, -0.5, 0.1],
         [0, 1, 2]))
-def test_combined_cxxyy_consistency_special(exponent, control):
+def test_cubic_fermionic_simulation_gate_consistency_special(exponent, control):
     weights = tuple(np.eye(1, 3, control)[0])
-    general_gate  = ofc.CombinedCXXYYPowGate(weights, exponent=exponent)
+    general_gate  = ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
     general_unitary = cirq.unitary(general_gate)
 
     indices = np.dot(
@@ -230,7 +231,8 @@ def test_combined_cxxyy_consistency_special(exponent, control):
     (np.random.uniform(-5, 5, 3) + 1j * np.random.uniform(-5, 5, 3),
         np.random.uniform(-5, 5)) for _ in range(5)
 ])
-def test_combined_cxxyy_consistency_docstring(weights, exponent):
+def test_cubic_fermionic_simulation_gate_consistency_docstring(
+        weights, exponent):
     generator = np.zeros((8, 8), dtype=np.complex128)
     # w0 |110><101| + h.c.
     generator[6, 5] = weights[0]
@@ -243,7 +245,7 @@ def test_combined_cxxyy_consistency_docstring(weights, exponent):
     generator[3, 5] = weights[2].conjugate()
     expected_unitary = la.expm(-0.5j * exponent * np.pi * generator)
 
-    gate  = ofc.CombinedCXXYYPowGate(weights, exponent=exponent)
+    gate  = ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
     actual_unitary = cirq.unitary(gate)
 
     assert np.allclose(expected_unitary, actual_unitary)

@@ -304,4 +304,4 @@ b: ───XXYY^0.5───#2^0.5───
 
 def test_combined_swap_and_z():
     ofc.testing.assert_implements_consistent_protocols(
-        ofc.CombinedSwapAndZ())
+        ofc.QuadraticFermionicSimulationGate())
