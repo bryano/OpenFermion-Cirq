@@ -67,36 +67,47 @@ def print_hermitian_matrices(*matrices):
             print(line)
 
 
-def random_resolver(operator):
-    return {p: random.uniform(-5, 5) for p in operator.params()}
-
-
-@pytest.mark.parametrize('cluster_operator,resolver',
-    [(cluster_operator, random_resolver(cluster_operator))
+@pytest.mark.parametrize('cluster_operator,parameters,n_repetitions',
+    [(cluster_operator, np.random.uniform(-5, 5, shape), n_repetitions)
         for n_spatial_modes in [2, 3, 4]
         for cluster_operator in [PairedCoupledClusterOperator(n_spatial_modes,
             include_real_part=False)]
+#       for n_repetitions in (None, 1, 3)
+        for n_repetitions in (3,)
+        for shape in [
+            (n_repetitions or 1, len(list(cluster_operator.params())))]
         for _ in range(3)
         ])
-def test_paired_ucc(cluster_operator, resolver):
-    ansatz = UnitaryCoupledClusterAnsatz(cluster_operator)
-
-    circuit = cirq.resolve_parameters(ansatz._circuit, resolver)
+def test_paired_ucc(cluster_operator, parameters, n_repetitions):
+    ansatz = UnitaryCoupledClusterAnsatz(
+            cluster_operator, n_repetitions=n_repetitions)
+    resolver = dict(zip(ansatz.params(), parameters.flatten()))
 
     swap_network = cluster_operator.swap_network()
 
+    circuit = cirq.resolve_parameters(ansatz._circuit, resolver)
     actual_unitary = circuit.to_unitary_matrix(
             qubit_order=swap_network.qubit_order)
 
     acquaintance_dag = cca.get_acquaintance_dag(
             swap_network.circuit, swap_network.initial_mapping)
-    operator = cluster_operator.operator()
-    resolved_operator = cirq.resolve_parameters(operator, resolver)
-    hamiltonian = -1j * (resolved_operator -
-            openfermion.hermitian_conjugated(resolved_operator))
-    expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
+    partial_unitaries = []
+    for repetition in range(len(parameters)):
+        subparameters = parameters[repetition]
+        subresolver = dict(zip(cluster_operator.params(), subparameters))
+        operator = cluster_operator.operator()
+        resolved_operator = cirq.resolve_parameters(operator, subresolver)
+        hamiltonian = -1j * (resolved_operator -
+                openfermion.hermitian_conjugated(resolved_operator))
+        partial_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
+        partial_unitaries.append(partial_unitary)
+    if len(partial_unitaries) > 1:
+        expected_unitary = np.linalg.multi_dot(partial_unitaries[::-1])
+    else:
+        expected_unitary = partial_unitaries[0]
 
     assert np.allclose(actual_unitary, expected_unitary)
+
 
 def test_integration_paired_ucc():
     diatomic_bond_length = .7414
@@ -119,7 +130,7 @@ def test_integration_paired_ucc():
     n_spatial_modes = 2
     cluster_operator = PairedCoupledClusterOperator(
             n_spatial_modes, include_real_part=False)
-    ansatz = UnitaryCoupledClusterAnsatz(cluster_operator)
+    ansatz = UnitaryCoupledClusterAnsatz(cluster_operator, n_repetitions=3)
 
     objective = HamiltonianObjective(hamiltonian)
 

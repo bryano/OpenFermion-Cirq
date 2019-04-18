@@ -260,6 +260,7 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
             cluster_operator: CoupledClusterOperator,
             execution_strategy: cca.executor.ExecutionStrategy =
                 GreedyExecutionStrategy,
+            n_repetitions: Optional[int] = None,
             **kwargs) -> None:
 
         self.cluster_operator = cluster_operator
@@ -270,12 +271,36 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
         swap_network = cluster_operator.swap_network()
         execution_strategy(gates, swap_network.initial_mapping)(
                 swap_network.circuit)
-        self._circuit = swap_network.circuit
+
+        self.n_repetitions = n_repetitions
+        if n_repetitions is None:
+            circuit = swap_network.circuit
+        else:
+            circuit = cirq.Circuit()
+            for repetition in range(n_repetitions):
+                resolver = {}
+                for param in cluster_operator.params():
+                    assert isinstance(param, LetterWithSubscripts)
+                    subscripts = param.subscripts + (repetition,)
+                    new_param = LetterWithSubscripts(param.letter, *subscripts)
+                    resolver[param] = new_param
+                subcircuit = cirq.resolve_parameters(
+                        swap_network.circuit, resolver)
+                circuit += subcircuit
+        self._circuit = circuit
 
         super().__init__(**kwargs)
 
     def params(self):
-        return self.cluster_operator.params()
+        if self.n_repetitions is None:
+            for param in self.cluster_operator.params():
+                yield param
+        else:
+            for repetition in range(self.n_repetitions):
+                for param in self.cluster_operator.params():
+                    assert isinstance(param, LetterWithSubscripts)
+                    subscripts = param.subscripts + (repetition,)
+                    yield LetterWithSubscripts(param.letter, *subscripts)
 
     def default_initial_params(self):
         return numpy.zeros(len(list(self.params())))
