@@ -302,6 +302,48 @@ b: ───XXYY^0.5───#2^0.5───
 """)
 
 
-def test_combined_swap_and_z():
+def test_quadratic_fermionic_simulation_gate():
     ofc.testing.assert_implements_consistent_protocols(
         ofc.QuadraticFermionicSimulationGate())
+
+
+def test_quadratic_fermionic_simulation_gate_zero_weights():
+    gate = ofc.QuadraticFermionicSimulationGate((0, 0))
+
+    assert np.allclose(cirq.unitary(gate), np.eye(4))
+    cirq.testing.assert_decompose_is_consistent_with_unitary(gate)
+
+
+@pytest.mark.parametrize('weights,exponent', [
+    ((np.random.uniform(-5, 5) + 1j * np.random.uniform(-5, 5),
+        np.random.uniform(-5, 5)), np.random.uniform(-5, 5)) for _ in range(5)
+])
+def test_quadratic_fermionic_simulation_gate_unitary(
+        weights, exponent):
+    generator = np.zeros((4, 4), dtype=np.complex128)
+    # w0 |10><01| + h.c.
+    generator[2, 1] = weights[0]
+    generator[1, 2] = weights[0].conjugate()
+    # w1 |11><11|
+    generator[3, 3] = weights[1]
+    expected_unitary = expm(-1j * exponent * generator)
+
+    gate  = ofc.QuadraticFermionicSimulationGate(weights, exponent=exponent)
+    actual_unitary = cirq.unitary(gate)
+
+    assert np.allclose(expected_unitary, actual_unitary)
+
+    symbolic_gate = (
+            ofc.QuadraticFermionicSimulationGate(
+                (sympy.Symbol('w0'), sympy.Symbol('w1')),
+                exponent=sympy.Symbol('t')))
+    qubits = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit.from_ops(symbolic_gate._decompose_(qubits))
+    resolver = {'w0': weights[0], 'w1': weights[1], 't': exponent}
+    resolved_circuit = cirq.resolve_parameters(circuit, resolver)
+    decomp_unitary = resolved_circuit.to_unitary_matrix(qubit_order=qubits)
+
+    assert np.allclose(expected_unitary, decomp_unitary)
+
+    cirq.testing.assert_decompose_is_consistent_with_unitary(gate)
+

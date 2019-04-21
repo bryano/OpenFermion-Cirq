@@ -209,5 +209,3 @@ def _arg(x):
     if cirq.is_parameterized(x):
         return sympy.arg(x)
     return np.angle(x)
-
-
