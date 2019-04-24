@@ -292,6 +292,34 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
         return gate
 
     def _decompose_(self, qubits):
+        """The goal is to effect a rotation around an axis in the XY plane in
+        each of three orthogonal 2-dimensional subspaces.
+
+        First, the following basis change is performed:
+            0000 ↦ 0001        0001 ↦ 1111
+            1111 ↦ 0010        1110 ↦ 1100
+                               0010 ↦ 0000
+            0110 ↦ 0101        1101 ↦ 0011
+            1001 ↦ 0110        0100 ↦ 0100
+            1010 ↦ 1001        1011 ↦ 0111
+            0101 ↦ 1010        1000 ↦ 1000
+            1100 ↦ 1101        0111 ↦ 1011
+            0011 ↦ 1110
+
+        Note that for each 2-dimensional subspace of interest, the first two
+        qubits are the same and the right two qubits are different. The desired
+        rotations thus can be effected by a complex-version of a partial SWAP
+        gate on the latter two qubits, controlled on the first two qubits. This
+        partial SWAP-like gate can  be decomposed such that it is parameterized
+        solely by a rotation in the ZY plane on the third qubit. These are the
+        `individual_rotations`; call them U0, U1, U2.
+
+        To decompose the double controlled rotations, we use four other rotations V0, V1, V2, V3 (the `combined_rotations`) such that
+            U0 = V3 · V1 · V0
+            U1 = V3 · V2 · V1
+            U2 = V2 · V0
+        """
+
         if self._is_parameterized_():
             return NotImplemented
 
