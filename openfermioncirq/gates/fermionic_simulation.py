@@ -314,7 +314,8 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
         solely by a rotation in the ZY plane on the third qubit. These are the
         `individual_rotations`; call them U0, U1, U2.
 
-        To decompose the double controlled rotations, we use four other rotations V0, V1, V2, V3 (the `combined_rotations`) such that
+        To decompose the double controlled rotations, we use four other
+        rotations V0, V1, V2, V3 (the `combined_rotations`) such that
             U0 = V3 · V1 · V0
             U1 = V3 · V2 · V1
             U2 = V2 · V0
