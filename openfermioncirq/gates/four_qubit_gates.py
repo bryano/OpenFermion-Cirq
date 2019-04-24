@@ -22,6 +22,8 @@ import sympy
 import cirq
 from cirq._compat import proper_repr
 
+from openfermioncirq.gates.fermionic_simulation import _canonicalize_weight
+
 
 def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float=0):
     """The +/- eigen-component of the operation that swaps states x and y.
@@ -418,12 +420,3 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
             'exponent={})'.format(
                 ', '.join(proper_repr(v) for v in self.weights),
                 proper_repr(self.exponent)))
-
-
-def _canonicalize_weight(w):
-    if w == 0:
-        return (0, 0)
-    if cirq.is_parameterized(w):
-        return (cirq.PeriodicValue(abs(w), 4), sympy.arg(w))
-    return (np.round((w % 4) if (w == np.real(w)) else
-        (abs(w) % 4) * w / abs(w), 8), 0)
