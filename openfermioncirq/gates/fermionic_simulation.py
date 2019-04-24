@@ -200,7 +200,8 @@ class CubicFermionicSimulationGate(
             ('' if self.exponent == 1 else
              (', exponent=' + cirq._compat.proper_repr(self.exponent))) +
             ('' if self._global_shift == 0 else
-             (', global_shift=' + cirq._compat.proper_repr(self._global_shift))) +
+             (', global_shift=' +
+                 cirq._compat.proper_repr(self._global_shift))) +
             ')')
 
 

@@ -10,12 +10,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import itertools
-
 import numpy
 import pytest
 import scipy
-import scipy.linalg as la
 
 import cirq
 import openfermion

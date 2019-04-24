@@ -21,8 +21,6 @@ import sympy
 import cirq
 from cirq._compat import proper_repr
 
-from openfermioncirq.gates.fermionic_simulation import _canonicalize_weight
-
 
 class DoubleExcitationGate(cirq.EigenGate):
     """Evolve under -|0011><1100| + h.c. for some time."""
