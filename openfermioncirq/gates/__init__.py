@@ -35,9 +35,9 @@ from openfermioncirq.gates.three_qubit_gates import (
 
 from openfermioncirq.gates.fermionic_simulation import (
     QuadraticFermionicSimulationGate,
-    CubicFermionicSimulationGate)
+    CubicFermionicSimulationGate,
+    QuarticFermionicSimulationGate)
 
 from openfermioncirq.gates.four_qubit_gates import (
     DoubleExcitation,
-    DoubleExcitationGate,
-    CombinedDoubleExcitationGate)
+    DoubleExcitationGate)

@@ -17,7 +17,6 @@ from openfermioncirq.gates import (
     CYXXY,
     CXXYYPowGate,
     CYXXYPowGate,
-    CombinedDoubleExcitationGate,
     DoubleExcitation,
     DoubleExcitationGate,
     FSWAP,
@@ -32,7 +31,8 @@ from openfermioncirq.gates import (
     YXXY,
     YXXYPowGate,
     QuadraticFermionicSimulationGate,
-    CubicFermionicSimulationGate
+    CubicFermionicSimulationGate,
+    QuarticFermionicSimulationGate
 )
 
 from openfermioncirq.primitives import (
