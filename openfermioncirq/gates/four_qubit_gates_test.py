@@ -15,6 +15,7 @@ import itertools
 import numpy
 import pytest
 import scipy
+import scipy.linalg as la
 
 import cirq
 import openfermion
@@ -186,10 +187,10 @@ combined_double_excitation_simulator_test_cases = [
          numpy.array([1, -1, -1, -1, -1, -1, 1, 1,
                       1, 1, 1, 1, 1, 1, 1, 1]) / 4.,
          numpy.array([1, -1, -1, -numpy.exp(-numpy.pi * 0.105j),
-                      -1, -numpy.exp(-numpy.pi * 0.585j),
+                      -1, -numpy.exp(numpy.pi * 0.015j),
                       numpy.exp(numpy.pi * 0.03j), 1,
                       1, numpy.exp(numpy.pi * 0.03j),
-                      numpy.exp(-numpy.pi * 0.585j), 1,
+                      numpy.exp(numpy.pi * 0.015j), 1,
                       numpy.exp(-numpy.pi * 0.105j), 1, 1, 1]) / 4.,
          5e-6),
         (ofc.CombinedDoubleExcitationGate((1. / 3, 0, 0)), 1.,
@@ -470,3 +471,39 @@ test_weights = [1.0, 0.5, 0.25, 0.1, 0.0, -0.5]
 def test_combined_double_excitation_decompose(weights):
     cirq.testing.assert_decompose_is_consistent_with_unitary(
         ofc.CombinedDoubleExcitationGate(weights))
+
+
+@pytest.mark.parametrize('weights,exponent', [
+    (numpy.random.uniform(-5, 5, 3) + 1j * numpy.random.uniform(-5, 5, 3),
+        numpy.random.uniform(-5, 5)) for _ in range(5)
+])
+def test_combined_double_excitation_unitary(
+        weights, exponent):
+    generator = numpy.zeros((1 << 4,) * 2, dtype=numpy.complex128)
+
+    # w0 |1001><0110| + h.c.
+    generator[9, 6] = weights[0]
+    generator[6, 9] = weights[0].conjugate()
+    # w1 |1010><0101| + h.c.
+    generator[10, 5] = weights[1]
+    generator[5, 10] = weights[1].conjugate()
+    # w2 |1100><0011| + h.c.
+    generator[12, 3] = weights[2]
+    generator[3, 12] = weights[2].conjugate()
+    expected_unitary = la.expm(0.5j * exponent * numpy.pi * generator)
+
+    gate  = ofc.CombinedDoubleExcitationGate(weights, exponent=exponent)
+    actual_unitary = cirq.unitary(gate)
+
+    assert numpy.allclose(expected_unitary, actual_unitary)
+
+    cirq.testing.assert_decompose_is_consistent_with_unitary(gate)
+
+
+@pytest.mark.parametrize('weights,exponent', [
+    (numpy.random.uniform(-5, 5, 3) + 1j * numpy.random.uniform(-5, 5, 3),
+        numpy.random.uniform(-5, 5)) for _ in range(5)
+])
+def test_double_excitation_apply_unitary(weights, exponent):
+    gate = ofc.CombinedDoubleExcitationGate(weights, exponent=exponent)
+    cirq.testing.assert_has_consistent_apply_unitary(gate, atol=5e-6)

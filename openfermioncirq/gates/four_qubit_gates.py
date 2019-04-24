@@ -16,27 +16,30 @@
 from typing import Optional, Union, Tuple
 
 import numpy as np
+import scipy.linalg as la
 import sympy
 
 import cirq
 from cirq._compat import proper_repr
 
 
-def state_swap_eigen_component(x: str, y: str, sign: int = 1):
+def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float=0):
     """The +/- eigen-component of the operation that swaps states x and y.
 
-    For example, state_swap_eigen_component('01', '10', ±1) returns
-        ┌             ┐
-        │0 0    0    0│
-        │0 0.5  ±0.5 0│
-        │0 ±0.5 0.5  0│
-        │0 0    0    0│
-        └             ┘
+    For example, state_swap_eigen_component('01', '10', ±1) with angle θ returns
+        ┌                               ┐
+        │0, 0,           0,            0│
+        │0, 0.5,         ±0.5 e^{-iθ}, 0│
+        │0, ±0.5 e^{iθ}, 0.5,          0│
+        │0, 0,           0,            0│
+        └                               ┘
 
     Args:
         x: The first state to swap, as a bitstring.
-        y: The second state to swap, as a bitstring.
+        y: The second state to swap, as a bitstring. Must have high index than
+            x.
         sign: The sign of the off-diagonal elements (indicated by +/-1).
+        angle: The phase of the complex off-diagonal elements. Defaults to 0.
 
     Returns: The eigen-component.
 
@@ -62,9 +65,10 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1):
     dim = 2 ** len(x)
     i, j = int(x, 2), int(y, 2)
 
-    component = np.zeros((dim, dim))
+    component = np.zeros((dim, dim), dtype=np.complex128)
     component[i, i] = component[j, j] = 0.5
-    component[i, j] = component[j, i] = sign * 0.5
+    component[j, i]= sign * 0.5 * 1j**(angle * 2 / np.pi)
+    component[i, j]= sign * 0.5 * 1j**(-angle * 2 / np.pi)
     return component
 
 
@@ -200,13 +204,13 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
     """Rotates Hamming-weight 2 states into their bitwise complements.
 
     For weights (t0, t1, t2), is equivalent to
-        exp(0.5 pi i (t0 (|1001><0110| + |0110><1001|) +
-                      t1 (|0101><1010| + |1010><0101|) +
-                      t2 (|0011><1100| + |1100><0011|)))
+        exp(0.5 π i (t0 |1001><0110| + h.c.) +
+                      t1 |1010><0101| + h.c.) +
+                      t2 |1100><0011| + h.c.)))
     """
 
     def __init__(self,
-                 weights: Tuple[float, float, float]=(1, 1, 1),
+                 weights: Tuple[complex, complex, complex]=(1, 1, 1),
                  absorb_exponent: bool=True,
                  *,  # Forces keyword args.
                  exponent: Optional[Union[sympy.Symbol, float]]=None,
@@ -261,13 +265,14 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
         zero_component = np.diag([int(bin(i).count('1') != 2)
                                   for i in range(16)])
 
-        state_pairs = (('1001', '0110'),
+        state_pairs = (('0110', '1001'),
                        ('0101', '1010'),
                        ('0011', '1100'))
 
         plus_minus_components = tuple(
-            (weight * sign / 2,
-             state_swap_eigen_component(state_pair[0], state_pair[1], sign))
+            (abs(weight) * sign / 2,
+             state_swap_eigen_component(
+                 state_pair[0], state_pair[1], sign, np.angle(weight)))
             for weight, state_pair in zip(self.weights, state_pairs)
             for sign in (-1, 1))
 
@@ -281,14 +286,32 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
         return gate
 
     def _decompose_(self, qubits):
-        a, b, c, d = qubits
+        if self._is_parameterized_():
+            return NotImplemented
 
-        weights_to_exponents = (self._exponent / 4.) * np.array([
-            [1, -1, 1],
-            [1, 1, -1],
-            [-1, 1, 1]
-        ])
-        exponents = weights_to_exponents.dot(self.weights)
+        individual_rotations = [
+            la.expm(-0.25j * self.exponent * np.pi * np.array([
+                [np.real(w), 1j * s * np.imag(w)],
+                [-1j * s * np.imag(w), -np.real(w)]]))
+            for s, w in zip([1, -1, -1], self.weights)]
+
+        combined_rotations = {}
+        combined_rotations[0] = la.sqrtm(np.linalg.multi_dot([
+                la.inv(individual_rotations[1]),
+                individual_rotations[0],
+                individual_rotations[2]]))
+        combined_rotations[1] = la.inv(combined_rotations[0])
+        combined_rotations[2] = np.linalg.multi_dot([
+                la.inv(individual_rotations[0]),
+                individual_rotations[1],
+                combined_rotations[0]])
+        combined_rotations[3] = individual_rotations[0]
+
+        controlled_rotations = {i: cirq.ControlledGate(
+            cirq.SingleQubitMatrixGate(combined_rotations[i]))
+            for i in range(4)}
+
+        a, b, c, d = qubits
 
         basis_change = list(cirq.flatten_op_tree([
             cirq.CNOT(b, a),
@@ -304,21 +327,23 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
             [cirq.X(c), cirq.X(d)],
             ]))
 
-        controlled_Zs = list(cirq.flatten_op_tree([
-            cirq.CZPowGate(exponent=exponents[0])(b, c),
+        controlled_rotations = list(cirq.flatten_op_tree([
+            controlled_rotations[0](b, c),
             cirq.CNOT(a, b),
-            cirq.CZPowGate(exponent=exponents[1])(b, c),
+            controlled_rotations[1](b, c),
             cirq.CNOT(b, a),
             cirq.CNOT(a, b),
-            cirq.CZPowGate(exponent=exponents[2])(b, c)
+            controlled_rotations[2](b, c),
+            cirq.CNOT(a, b),
+            controlled_rotations[3](b, c)
             ]))
 
         controlled_swaps = [
             [cirq.CNOT(c, d), cirq.H(c)],
             cirq.CNOT(d, c),
-            controlled_Zs,
+            controlled_rotations,
             cirq.CNOT(d, c),
-            [cirq.inverse(op) for op in reversed(controlled_Zs)],
+            [cirq.inverse(op) for op in reversed(controlled_rotations)],
             [cirq.H(c), cirq.CNOT(c, d)],
             ]
 
@@ -336,16 +361,25 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
                                        exponent=self._diagram_exponent(args))
 
     def absorb_exponent_into_weights(self):
-        self.weights = tuple((w * self._exponent) % 4 for w in self.weights)
+        new_weights = []
+        for weight in self.weights:
+            if not weight:
+                new_weights.append(weight)
+                continue
+            old_abs = abs(weight)
+            new_abs = (old_abs * self._exponent) % 4
+            new_weights.append(weight * new_abs / old_abs)
+        self.weights = tuple(new_weights)
         self._exponent = 1
 
     def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs
                         ) -> Optional[np.ndarray]:
         if cirq.is_parameterized(self):
-            return None
-        am = cirq.unitary(cirq.Rx(-np.pi * self.exponent * self.weights[0]))
-        bm = cirq.unitary(cirq.Rx(-np.pi * self.exponent * self.weights[1]))
-        cm = cirq.unitary(cirq.Rx(-np.pi * self.exponent * self.weights[2]))
+            return NotImplemented
+
+        am, bm, cm = (la.expm(0.5j * self.exponent * np.pi *
+                      np.array([[0, w], [w.conjugate(), 0]]))
+                      for w in self.weights)
 
         a1 = args.subspace_index(0b1001)
         b1 = args.subspace_index(0b0101)
@@ -369,15 +403,13 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
                                            out=args.available_buffer)
 
     def _value_equality_values_(self):
-        return tuple(cirq.PeriodicValue(w * self._exponent, 4)
-                     for w in self.weights)
+        return tuple(_canonicalize_weight(w * self.exponent)
+                for w in list(self.weights) + [self._global_shift])
 
     def _is_parameterized_(self) -> bool:
-        return any(isinstance(v, sympy.Basic) or
-                (isinstance(v, cirq.PeriodicValue) and
-                    any(isinstance(vv, sympy.Basic)
-                        for vv in (v.value, v.period)))
-                for v in self._value_equality_values_())
+        return any(cirq.is_parameterized(v)
+                for V in self._value_equality_values_()
+                for v in V)
 
     def __repr__(self):
         return (
@@ -386,3 +418,12 @@ class CombinedDoubleExcitationGate(cirq.EigenGate):
             'exponent={})'.format(
                 ', '.join(proper_repr(v) for v in self.weights),
                 proper_repr(self.exponent)))
+
+
+def _canonicalize_weight(w):
+    if w == 0:
+        return (0, 0)
+    if cirq.is_parameterized(w):
+        return (cirq.PeriodicValue(abs(w), 4), sympy.arg(w))
+    return (np.round((w % 4) if (w == np.real(w)) else
+        (abs(w) % 4) * w / abs(w), 8), 0)

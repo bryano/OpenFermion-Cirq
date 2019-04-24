@@ -18,9 +18,9 @@ import numpy as np
 
 import cirq
 from cirq._compat import proper_repr
-import sympy
 
 from openfermioncirq.gates import common_gates
+from openfermioncirq.gates.four_qubit_gates import _canonicalize_weight
 
 
 def rot111(rads: float):
@@ -183,15 +183,11 @@ class CubicFermionicSimulationGate(
         return components
 
     def _value_equality_values_(self):
-        return tuple(
-                (cirq.PeriodicValue(abs(w) * self.exponent, 4), _arg(w))
-                     for w in self.weights)
+        return tuple(_canonicalize_weight(w * self.exponent)
+                for w in list(self.weights) + [self._global_shift])
 
     def _is_parameterized_(self) -> bool:
-        return any(isinstance(v, sympy.Basic) or
-                (isinstance(v, cirq.PeriodicValue) and
-                    any(isinstance(vv, sympy.Basic)
-                        for vv in (v.value, v.period)))
+        return any(cirq.is_parameterized(v)
                 for V in self._value_equality_values_()
                 for v in V)
 
@@ -201,11 +197,6 @@ class CubicFermionicSimulationGate(
             '({})'.format(' ,'.join(proper_repr(w) for w in self.weights)) +
             ('' if self.exponent == 1 else
              (', exponent=' + proper_repr(self.exponent))) +
+            ('' if self._global_shift == 0 else
+             (', global_shift=' + proper_repr(self._global_shift))) +
             ')')
-
-def _arg(x):
-    if x == 0:
-        return 0
-    if cirq.is_parameterized(x):
-        return sympy.arg(x)
-    return np.angle(x)
