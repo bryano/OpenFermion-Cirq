@@ -353,9 +353,7 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
             [cirq.H(c), cirq.CNOT(c, d)],
             ]
 
-        yield basis_change
-        yield controlled_swaps
-        yield basis_change[::-1]
+        return [basis_change, controlled_swaps, basis_change[::-1]]
 
     def _circuit_diagram_info_(self, args: cirq.CircuitDiagramInfoArgs
                                ) -> cirq.CircuitDiagramInfo:
