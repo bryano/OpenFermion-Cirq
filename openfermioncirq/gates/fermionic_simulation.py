@@ -92,9 +92,31 @@ class QuadraticFermionicSimulationGate(
         cirq.TwoQubitGate):
     """(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
 
-    With weights (w0, w1) and exponent t, this gate's matrix is defined as
-    follows:
-        exp(-i t ((w0 |10><01| + h.c.) + w1 |11><11|))
+    With weights :math:`(w_0, w_1)` and exponent :math:`t`, this gate's matrix
+    is defined as
+
+    .. math::
+        e^{-i t H},
+
+    where
+
+    .. math::
+        H = \left(w_0 \left| 10 \\right\\rangle\left\langle 01 \\right| +
+                \\text{h.c.}\\right) -
+            w_1 \left| 11 \\right\\rangle \left\langle 11 \\right|.
+
+    This corresponds to the Jordan-Wigner transform of
+
+    .. math::
+        H = (w_0 a^{\dagger}_i a_{i+1} + \\text{h.c.}) +
+             w_1 a_{i}^{\dagger} a_{i+1}^{\dagger} a_{i} a_{i+1},
+
+    where :math:`a_i` and  :math:`a_{i+1}` are the annihilation operators for
+    the fermionic modes :math:`i` and :math:`(i+1)`, respectively mapped to the
+    first and second qubits on which this gate acts.
+
+    Args:
+        weights: The weights of the terms in the Hamiltonian.
     """
 
     def __init__(self,
@@ -147,11 +169,35 @@ class CubicFermionicSimulationGate(
         cirq.ThreeQubitGate):
     """w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
-    With weights (w0, w1, w2) and exponent t, this gate's matrix is defined as
-    follows:
-        exp(-i π 0.5 t (w0 |110><101| + h.c.) +
-                        w1 |110><011| + h.c.) +
-                        w2 |101><011| + h.c.)))
+    With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
+    matrix is defined as
+
+    .. math::
+        e^{-i \pi t H / 2},
+
+    where
+
+    .. math::
+        H = \left(w_0 \left| 110 \\right\\rangle\left\langle 101 \\right| +
+                \\text{h.c.}\\right) +
+            \left(w_1 \left| 110 \\right\\rangle\left\langle 011 \\right| +
+                \\text{h.c.}\\right) +
+            \left(w_2 \left| 101 \\right\\rangle\left\langle 011 \\right| +
+                \\text{h.c.}\\right)
+
+    This corresponds to the Jordan-Wigner transform of
+
+    .. math::
+        H = -\left(w_0 a^{\dagger}_i a^{\dagger}_{i+1} a_{i} a_{i+2} +
+                   \\text{h.c.}\\right) -
+            \left(w_1 a^{\dagger}_i a^{\dagger}_{i+1} a_{i+1} a_{i+2} +
+                  \\text{h.c.}\\right) -
+            \left(w_2 a^{\dagger}_i a^{\dagger}_{i+2} a_{i+1} a_{i+2} +
+                  \\text{h.c.}\\right),
+
+    where :math:`a_i`, :math:`a_{i+1}`, :math:`a_{i+2}` are the annihilation
+    operators for the fermionic modes :math:`i`, :math:`(i+1)` :math:`(i+2)`,
+    respectively mapped to the three qubits on which this gate acts.
 
     Args:
         weights: The weights of the terms in the Hamiltonian.
@@ -209,10 +255,39 @@ class CubicFermionicSimulationGate(
 class QuarticFermionicSimulationGate(cirq.EigenGate):
     """Rotates Hamming-weight 2 states into their bitwise complements.
 
-    For weights (t0, t1, t2), is equivalent to
-        exp(0.5 π i (t0 |1001><0110| + h.c.) +
-                      t1 |1010><0101| + h.c.) +
-                      t2 |1100><0011| + h.c.)))
+    With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
+    matrix is defined as
+
+    .. math::
+        e^{i \pi t H / 2},
+
+    where
+
+    .. math::
+        H = \left(w_0 \left| 1001 \\right\\rangle\left\langle 0110 \\right| +
+                \\text{h.c.}\\right) +
+            \left(w_1 \left| 1010 \\right\\rangle\left\langle 0101 \\right| +
+                \\text{h.c.}\\right) +
+            \left(w_2 \left| 1100 \\right\\rangle\left\langle 0011 \\right| +
+                \\text{h.c.}\\right)
+
+    This corresponds to the Jordan-Wigner transform of
+
+    .. math::
+        H = -\left(w_0 a^{\dagger}_i a^{\dagger}_{i+3} a_{i+1} a_{i+2} +
+                   \\text{h.c.}\\right) -
+            \left(w_1 a^{\dagger}_i a^{\dagger}_{i+2} a_{i+1} a_{i+3} +
+                  \\text{h.c.}\\right) -
+            \left(w_2 a^{\dagger}_i a^{\dagger}_{i+1} a_{i+2} a_{i+3} +
+                  \\text{h.c.}\\right),
+
+    where :math:`a_i`, ..., :math:`a_{i+3}` are the annihilation operators for
+    the fermionic modes :math:`i`, ..., :math:`(i+3)`, respectively
+    mapped to the four qubits on which this gate acts.
+
+
+    Args:
+        weights: The weights of the terms in the Hamiltonian.
     """
 
     def __init__(self,
