@@ -173,7 +173,7 @@ class CubicFermionicSimulationGate(
     matrix is defined as
 
     .. math::
-        e^{-i \pi t H / 2},
+        e^{-i t H},
 
     where
 
@@ -221,7 +221,7 @@ class CubicFermionicSimulationGate(
         assert(np.allclose(nontrivial_part, nontrivial_part.conj().T))
         eig_vals, eig_vecs = np.linalg.eigh(nontrivial_part)
         for eig_val, eig_vec in zip(eig_vals, eig_vecs.T):
-            exp_factor = -0.5 * eig_val
+            exp_factor = -eig_val / np.pi
             proj = np.zeros((8, 8), dtype=np.complex128)
             nontrivial_indices = np.array([3, 5, 6], dtype=np.intp)
             proj[nontrivial_indices[:, np.newaxis], nontrivial_indices] = (

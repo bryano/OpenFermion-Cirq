@@ -132,7 +132,7 @@ def test_cubic_fermionic_simulation_gate_equality():
         [0, 1, -1, 0.25, -0.5, 0.1],
         [0, 1, 2]))
 def test_cubic_fermionic_simulation_gate_consistency_special(exponent, control):
-    weights = tuple(np.eye(1, 3, control)[0])
+    weights = tuple(np.eye(1, 3, control)[0] * 0.5 * np.pi)
     general_gate  = ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
     general_unitary = cirq.unitary(general_gate)
 
@@ -162,7 +162,7 @@ def test_cubic_fermionic_simulation_gate_consistency_docstring(
     # w2 |101><011| + h.c.
     generator[5, 3] = weights[2]
     generator[3, 5] = weights[2].conjugate()
-    expected_unitary = la.expm(-0.5j * exponent * np.pi * generator)
+    expected_unitary = la.expm(-1j * exponent * generator)
 
     gate  = ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
     actual_unitary = cirq.unitary(gate)
