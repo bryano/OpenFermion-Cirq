@@ -12,7 +12,7 @@
 
 """Gates that are commonly used for quantum simulation of fermions."""
 
-from typing import cast, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -253,75 +253,3 @@ def rot11(rads: float):
 FSWAP = FSwapPowGate()
 XXYY = XXYYPowGate()
 YXXY = YXXYPowGate()
-
-class CombinedSwapAndZ(
-        cirq.EigenGate,
-        cirq.InterchangeableQubitsGate,
-        cirq.TwoQubitGate):
-    """w0 * (XX + YY) + w1 * |11><11| interaction.
-
-    Equivalent to XXYYPowGate and CZ (in either order).
-
-    With exponent e and global_shift s, the unitary is
-
-    exp(i * pi * e (s I - (w0 (|01><10| + |10><01|) - w1 |11><11|))).
-    """
-
-    def __init__(self,
-                 weights: Tuple[float, float]=(1, 1),
-                 **kwargs) -> None:
-
-        assert len(weights) == 2
-        self.weights = cast(Tuple[float, float], tuple(weights))
-
-        super().__init__(**kwargs)
-
-    def num_qubits(self):
-        return 2
-
-    def _decompose_(self, qubits):
-        yield XXYYPowGate(exponent=2 * self.weights[0] * self.exponent)(*qubits)
-        yield cirq.CZPowGate(exponent=-self.weights[1] * self.exponent)(*qubits)
-
-    def _eigen_components(self):
-        return [
-            (0, np.diag([1, 0, 0, 0])),
-            (-self.weights[0], np.array([[0, 0, 0, 0],
-                             [0, 0.5, 0.5, 0],
-                             [0, 0.5, 0.5, 0],
-                             [0, 0, 0, 0]])),
-            (self.weights[0], np.array([[0, 0, 0, 0],
-                             [0, 0.5, -0.5, 0],
-                             [0, -0.5, 0.5, 0],
-                             [0, 0, 0, 0]])),
-            (-self.weights[1], np.diag([0, 0, 0, 1])),
-        ]
-
-    def _with_exponent(self,
-                       exponent: Union[sympy.Symbol, float]
-                       ) -> 'CombinedSwapAndZ':
-        gate = type(self)(self.weights, global_shift=self._global_shift)
-        gate._exponent = exponent
-        return gate
-
-    def __repr__(self):
-        exponent_str = ('' if self.exponent == 1 else
-                ', exponent=' + cirq._compat.proper_repr(self.exponent))
-        return ('ofc.CombinedSwapAndZ(({}){})'.format(
-                ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
-                exponent_str))
-
-#   def _value_equality_values_(self):
-#       return tuple(self.weights) + super()._value_equality_values()
-
-#   def _is_parameterized_(self):
-#       return any(cirq.is_parameterized(v)
-#               for v in self._value_equality_values_())
-
-    def _resolve_parameters_(self, resolver):
-        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
-        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
-        resolved_global_shift = cirq.resolve_parameters(
-                self._global_shift, resolver)
-        return type(self)(resolved_weights, exponent = resolved_exponent,
-                global_shift = resolved_global_shift)
