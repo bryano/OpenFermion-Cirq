@@ -298,7 +298,8 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
                  exponent: Optional[Union[sympy.Symbol, float]]=None,
                  rads: Optional[float]=None,
                  degs: Optional[float]=None,
-                 duration: Optional[float]=None
+                 duration: Optional[float]=None,
+                 **kwargs
                  ) -> None:
         """Initialize the gate.
 
@@ -333,7 +334,7 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
                 rads=rads,
                 degs=degs)
 
-        super().__init__(exponent=exponent)
+        super().__init__(exponent=exponent, **kwargs)
 
         if absorb_exponent:
             self.absorb_exponent_into_weights()
@@ -480,6 +481,7 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
             new_abs = (old_abs * self._exponent) % period
             new_weights.append(weight * new_abs / old_abs)
         self.weights = tuple(new_weights)
+        self._global_shift *= self._exponent
         self._exponent = 1
 
     def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs

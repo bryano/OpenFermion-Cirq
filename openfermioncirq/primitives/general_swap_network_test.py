@@ -73,7 +73,8 @@ def test_trotterize(order, hamiltonian):
 
 
 @pytest.mark.parametrize('constant,potential',
-    [(1, 1), (0, 1), (0, 0.3), (-0.5, 0.7)])
+    [(1, 1), (0, 1), (0, 0.3), (-0.5, 0.7)] + 
+    [np.random.standard_normal(2) for _ in range(3)])
 def test_untrotterize_linear(constant, potential):
     exponent = potential / np.pi
     global_shift = constant / (exponent * np.pi)
@@ -86,10 +87,12 @@ def test_untrotterize_linear(constant, potential):
 
 
 @pytest.mark.parametrize('constant,tunneling,interaction,scale',
-    [(0,0,0,1), (1, 1, 1, 1), (0.2, -0.5, 1.7, 0.3), (-0.1, -0.5, 1, -1)])
+    [(0,0,0,1), (1, 1, 1, 1), (0.2, -0.5, 1.7, 0.3), (-0.1, -0.5, 1, -1)] +
+    [np.random.standard_normal(4) for _ in range(3)])
 def test_untrotterize_quadratic(constant, tunneling, interaction, scale):
-    weights = (-tunneling / np.pi, interaction / np.pi)
-    gate = ofc.CombinedSwapAndZ(weights, exponent=scale, global_shift=constant)
+    weights = (-tunneling, interaction)
+    gate = ofc.QuadraticFermionicSimulationGate(
+            weights, exponent=scale, global_shift=constant)
     gates = {(0, 1): gate}
     hamiltonian = untrotterize(2, gates)
     expected_constant = constant * scale
@@ -109,9 +112,8 @@ def test_untrotterize_quadratic(constant, tunneling, interaction, scale):
       np.random.standard_normal(3),
       np.random.standard_normal()) for _ in range(10)])
 def test_untrotterize_cubic(constant, coeffs, scale):
-    weights = tuple(-2 * c  / np.pi for c in coeffs)
-    gate = ofc.CombinedCXXYYPowGate(
-            weights=weights, exponent=scale, global_shift=constant)
+    gate = ofc.CubicFermionicSimulationGate(
+            weights=coeffs, exponent=scale, global_shift=constant)
     gates = {(0, 1, 2): gate}
     hamiltonian = untrotterize(3, gates)
     expected_constant = constant * scale
@@ -120,8 +122,8 @@ def test_untrotterize_cubic(constant, coeffs, scale):
     expected_two_body_tensor = np.zeros((3,) * 4)
     composite_indices = [((0, 1), (0, 2)), ((0, 1), (1, 2)), ((0, 2), (1, 2))]
     for (pq, rs), w in zip(composite_indices, coeffs):
-        expected_two_body_tensor[pq + rs] = -w
-        expected_two_body_tensor[rs + pq] = -w
+        expected_two_body_tensor[pq + rs] = w
+        expected_two_body_tensor[rs + pq] = w
     expected_two_body_tensor *= scale
     assert np.allclose(hamiltonian.two_body_tensor, expected_two_body_tensor)
 
@@ -131,9 +133,8 @@ def test_untrotterize_cubic(constant, coeffs, scale):
       np.random.standard_normal(3),
       np.random.standard_normal()) for _ in range(10)])
 def test_untrotterize_quartic(constant, coeffs, scale):
-    weights = tuple(2 * c / np.pi for c in coeffs)
-    gate = ofc.CombinedDoubleExcitationGate(
-            weights=weights, exponent=scale, global_shift=constant)
+    gate = ofc.QuarticFermionicSimulationGate(
+            weights=coeffs, exponent=scale, global_shift=constant)
     gates = {(0, 1, 2, 3): gate}
     hamiltonian = untrotterize(4, gates)
     expected_constant = constant * scale
@@ -142,8 +143,8 @@ def test_untrotterize_quartic(constant, coeffs, scale):
     expected_two_body_tensor = np.zeros((4,) * 4)
     composite_indices = [((0, 3), (1, 2)), ((0, 2), (1, 3)), ((0, 1), (2, 3))]
     for (pq, rs), w in zip(composite_indices, coeffs):
-        expected_two_body_tensor[pq + rs] = -w
-        expected_two_body_tensor[rs + pq] = -w
+        expected_two_body_tensor[pq + rs] = w
+        expected_two_body_tensor[rs + pq] = w
     expected_two_body_tensor *= scale
     assert np.allclose(np.mod(hamiltonian.two_body_tensor, 2 * np.pi),
                        np.mod(expected_two_body_tensor, 2 * np.pi))
@@ -163,6 +164,18 @@ def test_untrotterize(hamiltonian):
     other_hamiltonian = untrotterize(n_modes, gates)
     other_normal_ordered_hamiltonian = (
             openfermion.normal_ordered(other_hamiltonian))
+    foo = normal_ordered_hamiltonian.one_body_tensor
+    bar = other_normal_ordered_hamiltonian.one_body_tensor
     normal_ordered_hamiltonian %= 2 * np.pi
     other_normal_ordered_hamiltonian %= 2 * np.pi
+#   print(normal_ordered_hamiltonian)
+#   print(other_normal_ordered_hamiltonian)
+#   print(normal_ordered_hamiltonian - other_normal_ordered_hamiltonian)
+    print(np.isclose(normal_ordered_hamiltonian.constant,
+        other_normal_ordered_hamiltonian.constant)) 
+    print(np.allclose(normal_ordered_hamiltonian.one_body_tensor,
+        other_normal_ordered_hamiltonian.one_body_tensor)) 
+    print(foo / bar)
+    print(np.allclose(normal_ordered_hamiltonian.two_body_tensor,
+        other_normal_ordered_hamiltonian.two_body_tensor)) 
     assert normal_ordered_hamiltonian == other_normal_ordered_hamiltonian
