@@ -10,14 +10,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Optional, Tuple, Union
+import itertools
+from typing import cast, Iterable, Optional, Tuple, TYPE_CHECKING, Union
 
 import cirq
 import numpy as np
+import openfermion
 import scipy.linalg as la
 import sympy
 
 from openfermioncirq.gates.common_gates import XXYYPowGate
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from typing import Dict
 
 
 def _arg(x):
@@ -87,6 +93,42 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float=0):
     return component
 
 
+def fermionic_simulation_gates_from_interaction_operator(
+        operator: openfermion.InteractionOperator):
+    """
+    Returns gates $\left\{G_a\\right\} = \left\{e^{i H_a\\right\}$ such that
+    $e^{i H} ~ \\prod_a e^{i H_a}$.
+
+    Args:
+        operator: The interaction operator.
+        modes:
+    Returns: A dict from a tuple of mode indices to a gate.
+    """
+    n_qubits = operator.n_qubits
+
+    gates = {} # type: Dict[Tuple[int, ...], cirq.Gate]
+    for p in range(n_qubits):
+        coeff = operator.one_body_tensor[p, p]
+        if coeff:
+            gates[(p,)] = cirq.Z**(coeff / np.pi)
+    for modes in itertools.combinations(range(n_qubits), 2):
+        gate = QuadraticFermionicSimulationGate.from_interaction(
+                operator, modes)
+        if gate:
+            gates[modes] = gate
+    for modes in itertools.combinations(range(n_qubits), 3):
+        gate = CubicFermionicSimulationGate.from_interaction(
+                operator, modes)
+        if gate:
+            gates[modes] = gate
+    for modes in itertools.combinations(range(n_qubits), 4):
+        gate = QuarticFermionicSimulationGate.from_interaction(
+                operator, modes)
+        if gate:
+            gates[modes] = gate
+    return gates
+
+
 class QuadraticFermionicSimulationGate(
         cirq.EigenGate,
         cirq.InterchangeableQubitsGate,
@@ -121,7 +163,7 @@ class QuadraticFermionicSimulationGate(
     """
 
     def __init__(self,
-                 weights: Tuple[float, float]=(1, 1),
+                 weights: Tuple[complex, complex]=(1, 1),
                  **kwargs) -> None:
         self.weights = weights
 
@@ -163,6 +205,40 @@ class QuadraticFermionicSimulationGate(
                 ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
                 exponent_str))
 
+    @classmethod
+    def from_interaction(cls,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        p, q = modes
+        tunneling_coeff = operator.one_body_tensor[p, q]
+        interaction_coeff = (
+                - operator.two_body_tensor[p, q, p, q]
+                + operator.two_body_tensor[q, p, p, q]
+                + operator.two_body_tensor[p, q, q, p]
+                - operator.two_body_tensor[q, p, q, p])
+        weights = (-tunneling_coeff, -interaction_coeff
+                ) # type: Tuple[complex, complex]
+        if any(weights):
+            return cls(weights)
+        return None
+
+    @property
+    def generator(self):
+        generator = np.zeros((4, 4), dtype=np.complex128)
+        # w0 |10><01| + h.c.
+        generator[2, 1] = self.weights[0]
+        generator[1, 2] = self.weights[0].conjugate()
+        # w1 |11><11|
+        generator[3, 3] = self.weights[1]
+        return generator
+
+    def _resolve_parameters_(self, resolver):
+        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
+        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
+        resolved_global_shift = cirq.resolve_parameters(
+                self._global_shift, resolver)
+        return type(self)(resolved_weights, exponent = resolved_exponent,
+                          global_shift = resolved_global_shift)
 
 @cirq.value_equality(approximate=True)
 class CubicFermionicSimulationGate(
@@ -250,6 +326,36 @@ class CubicFermionicSimulationGate(
              (', global_shift=' +
                  cirq._compat.proper_repr(self._global_shift))) +
             ')')
+
+    @classmethod
+    def from_interaction(cls,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        i, j, k = modes
+        weights = tuple(sgn * (
+            operator.two_body_tensor[p, q, p, r] -
+            operator.two_body_tensor[p, q, r, p] -
+            operator.two_body_tensor[q, p, p, r] +
+            operator.two_body_tensor[q, p, r, p])
+            for sgn, (p, q, r) in zip(
+                [1, -1, 1], [(i, j, k), (j, k, i), (k, i, j)]))
+        if any(weights):
+            return cls(cast(Tuple[complex, complex, complex], weights))
+        return None
+
+    @property
+    def generator(self):
+        generator = np.zeros((8, 8), dtype=np.complex128)
+        # w0 |110><101| + h.c.
+        generator[6, 5] = self.weights[0]
+        generator[5, 6] = self.weights[0].conjugate()
+        # w1 |110><011| + h.c.
+        generator[6, 3] = self.weights[1]
+        generator[3, 6] = self.weights[1].conjugate()
+        # w2 |101><011| + h.c.
+        generator[5, 3] = self.weights[2]
+        generator[3, 5] = self.weights[2].conjugate()
+        return generator
 
 
 @cirq.value_equality(approximate=True)
@@ -530,3 +636,41 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
             'exponent={})'.format(
                 ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
                 cirq._compat.proper_repr(self.exponent)))
+
+    @classmethod
+    def from_interaction(cls,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        i, j, k, l = modes
+        weights = tuple((
+            operator.two_body_tensor[p, q, r, s] -
+            operator.two_body_tensor[p, q, s, r] -
+            operator.two_body_tensor[q, p, r, s] +
+            operator.two_body_tensor[q, p, s, r])
+            for p, q, r, s in [(i, l, j, k), (i, k, j, l),  (i, j, k, l)])
+        if any(weights):
+            return cls(cast(Tuple[complex, complex, complex], weights))
+        return None
+
+    @property
+    def generator(self):
+        generator = np.zeros((1 << 4,) * 2, dtype=np.complex128)
+
+        # w0 |1001><0110| + h.c.
+        generator[9, 6] = self.weights[0]
+        generator[6, 9] = self.weights[0].conjugate()
+        # w1 |1010><0101| + h.c.
+        generator[10, 5] = self.weights[1]
+        generator[5, 10] = self.weights[1].conjugate()
+        # w2 |1100><0011| + h.c.
+        generator[12, 3] = self.weights[2]
+        generator[3, 12] = self.weights[2].conjugate()
+        return generator
+
+    def _resolve_parameters_(self, resolver):
+        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
+        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
+        resolved_global_shift = cirq.resolve_parameters(
+                self._global_shift, resolver)
+        return type(self)(resolved_weights, exponent = resolved_exponent,
+                          global_shift = resolved_global_shift)

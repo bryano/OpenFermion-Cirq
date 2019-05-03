@@ -10,8 +10,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import itertools
-from typing import cast, Dict, Sequence, Tuple
+from typing import Dict, Sequence, Tuple
 
 import cirq
 import cirq.contrib.acquaintance as cca
@@ -22,7 +21,7 @@ import openfermion
 import openfermioncirq.gates as ofc_gates
 
 from openfermioncirq.gates import (
-        QuadraticFermionicSimulationGate, CubicFermionicSimulationGate, QuarticFermionicSimulationGate)
+    fermionic_simulation_gates_from_interaction_operator)
 
 class FermionicSwapNetwork:
     def __init__(self,
@@ -33,61 +32,6 @@ class FermionicSwapNetwork:
         self.circuit = circuit
         self.initial_mapping = initial_mapping
         self.qubit_order = qubit_order
-
-
-def trotterize(hamiltonian: openfermion.InteractionOperator):
-    """
-
-    Returns gates such that $e^{i H} ~ \\prod_a e^{i H_a}$.
-
-    """
-    n_qubits = hamiltonian.n_qubits
-    one_body_tensor = hamiltonian.one_body_tensor
-    two_body_tensor = hamiltonian.two_body_tensor
-#   assert np.allclose(one_body_tensor, np.conj(one_body_tensor))
-#   assert np.allclose(one_body_tensor, one_body_tensor.T)
-#   assert np.allclose(two_body_tensor.reshape((n_qubits ** 2,) * 2),
-#           two_body_tensor.reshape((n_qubits ** 2,) * 2).T)
-
-    gates = {} # type: Dict[Tuple[int, ...], cirq.Gate]
-    for p in range(n_qubits):
-        coeff = one_body_tensor[p, p]
-        if coeff:
-            gates[(p,)] = cirq.Z**(coeff / np.pi)
-    for p, q in itertools.combinations(range(n_qubits), 2):
-        tunneling_coeff = one_body_tensor[p, q]
-        interaction_coeff = (
-                - two_body_tensor[p, q, p, q]
-                + two_body_tensor[q, p, p, q]
-                + two_body_tensor[p, q, q, p]
-                - two_body_tensor[q, p, q, p])
-        weights = (-tunneling_coeff, -interaction_coeff
-                ) # type: Tuple[complex, ...]
-        if any(weights):
-            gates[(p, q)] = QuadraticFermionicSimulationGate(
-                    cast(Tuple[complex, complex], weights))
-    for i, j, k in itertools.combinations(range(n_qubits), 3):
-        weights = tuple(sgn * (
-            two_body_tensor[p, q, p, r] -
-            two_body_tensor[p, q, r, p] -
-            two_body_tensor[q, p, p, r] +
-            two_body_tensor[q, p, r, p])
-            for sgn, (p, q, r) in zip(
-                [1, -1, 1], [(i, j, k), (j, k, i), (k, i, j)]))
-        if any(weights):
-            gates[(i, j, k)] = CubicFermionicSimulationGate(
-                    cast(Tuple[complex, complex, complex], weights))
-    for i, j, k, l  in itertools.combinations(range(n_qubits), 4):
-        weights = tuple((
-            two_body_tensor[p, q, r, s] -
-            two_body_tensor[p, q, s, r] -
-            two_body_tensor[q, p, r, s] +
-            two_body_tensor[q, p, s, r])
-            for p, q, r, s in [(i, l, j, k), (i, k, j, l),  (i, j, k, l)])
-        if any(weights):
-            gates[(i, j, k, l)] = QuarticFermionicSimulationGate(
-                    cast(Tuple[complex, complex, complex], weights))
-    return gates
 
 
 def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
@@ -166,7 +110,7 @@ def trotter_circuit(
             GreedyExecutionStrategy,
         ) -> cirq.Circuit:
     assert openfermion.is_hermitian(hamiltonian)
-    gates = trotterize(hamiltonian)
+    gates = fermionic_simulation_gates_from_interaction_operator(hamiltonian)
     circuit = swap_network.copy()
     execution_strategy(gates, initial_mapping)(circuit)
     return circuit

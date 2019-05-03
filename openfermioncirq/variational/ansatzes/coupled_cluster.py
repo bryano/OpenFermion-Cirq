@@ -21,9 +21,10 @@ import numpy
 import openfermion
 import sympy
 
-from openfermioncirq.gates import FSWAP
+from openfermioncirq.gates import (
+        FSWAP, fermionic_simulation_gates_from_interaction_operator)
 from openfermioncirq.primitives.general_swap_network import (
-        FermionicSwapNetwork, trotterize, GreedyExecutionStrategy)
+        FermionicSwapNetwork, GreedyExecutionStrategy)
 from openfermioncirq.variational.ansatz import VariationalAnsatz
 from openfermioncirq.variational.letter_with_subscripts import (
         LetterWithSubscripts)
@@ -267,7 +268,7 @@ class UnitaryCoupledClusterAnsatz(VariationalAnsatz):
         operator = self.cluster_operator.operator()
         exponent = -1j * (
                 operator - openfermion.hermitian_conjugated(operator))
-        gates = trotterize(exponent)
+        gates = fermionic_simulation_gates_from_interaction_operator(exponent)
         swap_network = cluster_operator.swap_network()
         execution_strategy(gates, swap_network.initial_mapping)(
                 swap_network.circuit)

@@ -16,8 +16,8 @@ import pytest
 import openfermion
 
 import openfermioncirq.testing.random  as ofctr
-from openfermioncirq.primitives.general_swap_network import (
-        trotterize)
+from openfermioncirq.gates import (
+    fermionic_simulation_gates_from_interaction_operator)
 
 @pytest.mark.parametrize('op', [ofctr.random_interaction_operator_term(k)
         for k in (1, 2, 3, 4) for _ in range(5)])
@@ -28,7 +28,7 @@ def test_random_interaction_operator_term_hermiticity(op):
 @pytest.mark.parametrize('op', [ofctr.random_interaction_operator_term(k)
         for k in (1, 2, 3, 4) for _ in range(5)])
 def test_random_interaction_operator_term_order(op):
-    gates = trotterize(op)
+    gates = fermionic_simulation_gates_from_interaction_operator(op)
     assert len(gates) == 1
     for key in gates:
         assert len(key) == len(op.one_body_tensor)

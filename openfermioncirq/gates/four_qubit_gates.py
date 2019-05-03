@@ -13,7 +13,7 @@
 """Gates that target four qubits."""
 
 
-from typing import cast, Optional, Union, Tuple
+from typing import Optional, Union, Tuple
 
 import numpy as np
 import sympy

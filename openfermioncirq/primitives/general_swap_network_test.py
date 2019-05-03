@@ -20,8 +20,10 @@ import openfermion
 import scipy.linalg as la
 
 import openfermioncirq as ofc
+from openfermioncirq.gates.fermionic_simulation import (
+        fermionic_simulation_gates_from_interaction_operator)
 from openfermioncirq.primitives.general_swap_network import (
-        trotterize, untrotterize, trotter_circuit, trotter_unitary)
+        untrotterize, trotter_circuit, trotter_unitary)
 
 
 @pytest.mark.parametrize('order,hamiltonian',
@@ -73,7 +75,7 @@ def test_trotterize(order, hamiltonian):
 
 
 @pytest.mark.parametrize('constant,potential',
-    [(1, 1), (0, 1), (0, 0.3), (-0.5, 0.7)] + 
+    [(1, 1), (0, 1), (0, 0.3), (-0.5, 0.7)] +
     [np.random.standard_normal(2) for _ in range(3)])
 def test_untrotterize_linear(constant, potential):
     exponent = potential / np.pi
@@ -159,7 +161,7 @@ def test_untrotterize(hamiltonian):
     normal_ordered_hamiltonian = (
             openfermion.normal_ordered(hamiltonian))
 
-    gates = trotterize(hamiltonian)
+    gates = fermionic_simulation_gates_from_interaction_operator(hamiltonian)
 
     other_hamiltonian = untrotterize(n_modes, gates)
     other_normal_ordered_hamiltonian = (
@@ -168,14 +170,4 @@ def test_untrotterize(hamiltonian):
     bar = other_normal_ordered_hamiltonian.one_body_tensor
     normal_ordered_hamiltonian %= 2 * np.pi
     other_normal_ordered_hamiltonian %= 2 * np.pi
-#   print(normal_ordered_hamiltonian)
-#   print(other_normal_ordered_hamiltonian)
-#   print(normal_ordered_hamiltonian - other_normal_ordered_hamiltonian)
-    print(np.isclose(normal_ordered_hamiltonian.constant,
-        other_normal_ordered_hamiltonian.constant)) 
-    print(np.allclose(normal_ordered_hamiltonian.one_body_tensor,
-        other_normal_ordered_hamiltonian.one_body_tensor)) 
-    print(foo / bar)
-    print(np.allclose(normal_ordered_hamiltonian.two_body_tensor,
-        other_normal_ordered_hamiltonian.two_body_tensor)) 
     assert normal_ordered_hamiltonian == other_normal_ordered_hamiltonian
