@@ -477,7 +477,7 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
                 new_weights.append(weight)
                 continue
             old_abs = abs(weight)
-            new_abs = (old_abs * self._exponent) % period 
+            new_abs = (old_abs * self._exponent) % period
             new_weights.append(weight * new_abs / old_abs)
         self.weights = tuple(new_weights)
         self._exponent = 1

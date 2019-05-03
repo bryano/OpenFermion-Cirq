@@ -239,7 +239,8 @@ quartic_fermionic_simulation_simulator_test_cases = [
          np.array([0, 0, 0, 1, 0, 0, 0, 0,
                       0, 0, 0, 0, 1j, 0, 0, 0]) / np.sqrt(2),
          5e-6),
-        (ofc.QuarticFermionicSimulationGate((-np.pi / 4, np.pi /6, -np.pi / 2)), 1.,
+        (ofc.QuarticFermionicSimulationGate(
+            (-np.pi / 4, np.pi /6, -np.pi / 2)), 1.,
          np.array([0, 0, 0, 0, 0, 0, 1, 0,
                       0, 0, 1, 0, 1, 0, 0, 0]) / np.sqrt(3),
          np.array([0, 0, 0, 1j, 0, -1j / 2., 1 / np.sqrt(2), 0,
