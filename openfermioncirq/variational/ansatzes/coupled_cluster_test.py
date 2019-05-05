@@ -110,7 +110,7 @@ def test_paired_ucc(cluster_operator, parameters, n_repetitions):
 
 def test_integration_paired_ucc():
     diatomic_bond_length = .7414
-    geometry = [('H', (0., 0., 0.)), 
+    geometry = [('H', (0., 0., 0.)),
                 ('H', (0., 0., diatomic_bond_length))]
     basis = 'sto-3g'
     multiplicity = 1

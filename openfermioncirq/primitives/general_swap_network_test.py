@@ -54,7 +54,8 @@ def test_trotterize_term(order, hamiltonian):
 
 
 @pytest.mark.parametrize('order,hamiltonian',
-    [(order, openfermion.utils._testing_utils.random_interaction_operator(5, real=False))
+    [(order, openfermion.utils._testing_utils.random_interaction_operator(
+        5, real=False))
      for order in (1, 2, 3, 4) for _ in range(2)])
 def test_trotterize(order, hamiltonian):
     hamiltonian = hamiltonian.projected(order, True)
@@ -154,7 +155,8 @@ def test_untrotterize_quartic(constant, coeffs, scale):
         expected_two_body_tensor[pq + rs] = w
         expected_two_body_tensor[rs + pq] = w.conjugate()
     expected_two_body_tensor *= scale
-    diff = np.abs(hamiltonian.two_body_tensor - expected_two_body_tensor) / (2 * np.pi)
+    diff = np.abs(hamiltonian.two_body_tensor - expected_two_body_tensor
+            ) / (2 * np.pi)
     assert np.allclose(diff, np.around(diff))
 
 
@@ -169,11 +171,13 @@ def test_untrotterize(hamiltonian):
 
     gates = fermionic_simulation_gates_from_interaction_operator(hamiltonian)
 
-    other_hamiltonian = interaction_operator_from_fermionic_simulation_gates(n_modes, gates)
+    other_hamiltonian = interaction_operator_from_fermionic_simulation_gates(
+            n_modes, gates)
     other_normal_ordered_hamiltonian = (
             openfermion.normal_ordered(other_hamiltonian))
     diff = normal_ordered_hamiltonian - other_normal_ordered_hamiltonian
     assert np.allclose(diff.constant, 0)
-    assert np.allclose(diff.one_body_tensor, np.zeros_like(diff.one_body_tensor))
+    assert np.allclose(diff.one_body_tensor,
+            np.zeros_like(diff.one_body_tensor))
     abs_two_body_diff = np.abs(diff.two_body_tensor) / (2 * np.pi)
     assert np.allclose(abs_two_body_diff, np.around(abs_two_body_diff))

@@ -10,11 +10,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import itertools
-
 import numpy as np
 import pytest
-import scipy.linalg as la
 import sympy
 
 import cirq

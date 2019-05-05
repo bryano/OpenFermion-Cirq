@@ -11,7 +11,7 @@
 #   limitations under the License.
 
 import itertools
-from typing import cast, Dict, Iterable, Optional, Tuple, Union
+from typing import cast, Dict, Iterable, Optional, Sequence, Tuple, Union
 
 import cirq
 import numpy as np
@@ -254,7 +254,7 @@ class QuadraticFermionicSimulationGate(
 
     def to_interaction_operator(self,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Tuple[int, int]):
         weights = tuple(w * self._exponent for w in self.weights)
         operator.constant += self._exponent * self._global_shift
         operator.one_body_tensor[modes] -= weights[0]
