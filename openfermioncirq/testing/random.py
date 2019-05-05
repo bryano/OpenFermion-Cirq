@@ -23,11 +23,12 @@ def random_symmetric_matrix(n: int):
 
 def random_interaction_operator_term(
         order: int,
+        real: bool = True
         ) -> openfermion.InteractionOperator:
 
     n_orbitals = order
 
-    operator = random_interaction_operator(n_orbitals)
+    operator = random_interaction_operator(n_orbitals, real=real)
     operator.constant = 0
 
     for indices in itertools.product(range(n_orbitals), repeat=2):

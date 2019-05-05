@@ -23,6 +23,7 @@ import openfermioncirq.gates as ofc_gates
 from openfermioncirq.gates import (
     fermionic_simulation_gates_from_interaction_operator)
 
+
 class FermionicSwapNetwork:
     def __init__(self,
             circuit: cirq.Circuit,
@@ -32,53 +33,6 @@ class FermionicSwapNetwork:
         self.circuit = circuit
         self.initial_mapping = initial_mapping
         self.qubit_order = qubit_order
-
-
-def untrotterize(n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
-    # assumes gate indices in JW order
-    one_body_tensor = np.zeros((n_modes,) * 2)
-    two_body_tensor = np.zeros((n_modes,) * 4)
-
-    global_shift = 0
-
-    for indices, gate in gates.items():
-        if isinstance(gate, cirq.ZPowGate):
-            coeff = gate._exponent * np.pi
-            global_shift += gate._exponent * gate._global_shift * np.pi
-            one_body_tensor[indices * 2] += coeff
-        elif isinstance(gate, ofc_gates.QuadraticFermionicSimulationGate):
-            weights = tuple(w * gate._exponent for w in gate.weights)
-            global_shift += gate._exponent * gate._global_shift
-            one_body_tensor[indices] -= weights[0]
-            two_body_tensor[indices * 2] += weights[1]
-        elif isinstance(gate, ofc_gates.CubicFermionicSimulationGate):
-            weights = tuple(
-                    w * gate._exponent for w in gate.weights)
-            global_shift += gate._exponent * gate._global_shift
-            p, q, r = indices
-            two_body_tensor[p, q, p, r] += weights[0]
-            two_body_tensor[p, q, q, r] += weights[1]
-            two_body_tensor[p, r, q, r] += weights[2]
-        elif isinstance(gate, ofc_gates.QuarticFermionicSimulationGate):
-            weights = tuple(
-                    w * gate._exponent for w in gate.weights)
-            global_shift += gate._exponent * gate._global_shift
-            p, q, r, s = indices
-            two_body_tensor[p, s, q, r] += weights[0]
-            two_body_tensor[p, r, q, s] += weights[1]
-            two_body_tensor[p, q, r, s] += weights[2]
-        else:
-            raise NotImplementedError()
-
-    constant = global_shift
-    one_body_tensor += one_body_tensor.T - np.diag(np.diag(one_body_tensor))
-    two_body_tensor += (
-            np.transpose(two_body_tensor, (2, 3, 0, 1)) -
-            np.diag(np.diag(
-                two_body_tensor.reshape(
-                    (n_modes ** 2,) * 2))).reshape((n_modes,) * 4))
-    return openfermion.InteractionOperator(
-            constant, one_body_tensor, two_body_tensor)
 
 
 class GreedyExecutionStrategy(cca.GreedyExecutionStrategy):

@@ -11,7 +11,7 @@
 #   limitations under the License.
 
 import itertools
-from typing import cast, Iterable, Optional, Tuple, TYPE_CHECKING, Union
+from typing import cast, Dict, Iterable, Optional, Tuple, Union
 
 import cirq
 import numpy as np
@@ -20,10 +20,6 @@ import scipy.linalg as la
 import sympy
 
 from openfermioncirq.gates.common_gates import XXYYPowGate
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from typing import Dict
 
 
 def _arg(x):
@@ -127,6 +123,22 @@ def fermionic_simulation_gates_from_interaction_operator(
         if gate:
             gates[modes] = gate
     return gates
+
+def interaction_operator_from_fermionic_simulation_gates(
+        n_modes: int, gates: Dict[Tuple[int, ...], cirq.Gate]):
+    # assumes gate indices in JW order
+    operator = openfermion.InteractionOperator.zero(n_modes)
+
+    for indices, gate in gates.items():
+        if isinstance(gate, cirq.ZPowGate):
+            coeff = gate._exponent * np.pi
+            operator.constant += gate._exponent * gate._global_shift * np.pi
+            operator.one_body_tensor[indices * 2] += coeff
+        else:
+            gate.to_interaction_operator(operator, indices)
+
+    return operator
+
 
 
 class QuadraticFermionicSimulationGate(
@@ -240,6 +252,16 @@ class QuadraticFermionicSimulationGate(
         return type(self)(resolved_weights, exponent = resolved_exponent,
                           global_shift = resolved_global_shift)
 
+    def to_interaction_operator(self,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        weights = tuple(w * self._exponent for w in self.weights)
+        operator.constant += self._exponent * self._global_shift
+        operator.one_body_tensor[modes] -= weights[0]
+        operator.one_body_tensor[modes[::-1]] -= weights[0].conjugate()
+        operator.two_body_tensor[modes * 2] += weights[1]
+
+
 @cirq.value_equality(approximate=True)
 class CubicFermionicSimulationGate(
         cirq.EigenGate,
@@ -338,7 +360,7 @@ class CubicFermionicSimulationGate(
             operator.two_body_tensor[q, p, p, r] +
             operator.two_body_tensor[q, p, r, p])
             for sgn, (p, q, r) in zip(
-                [1, -1, 1], [(i, j, k), (j, k, i), (k, i, j)]))
+                [1, -1, 1], [(i, j, k), (j, i, k), (k, i, j)]))
         if any(weights):
             return cls(cast(Tuple[complex, complex, complex], weights))
         return None
@@ -356,6 +378,20 @@ class CubicFermionicSimulationGate(
         generator[5, 3] = self.weights[2]
         generator[3, 5] = self.weights[2].conjugate()
         return generator
+
+    def to_interaction_operator(self,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        weights = tuple(
+                w * self._exponent for w in self.weights)
+        operator.constant += self._exponent * self._global_shift
+        p, q, r = modes
+        operator.two_body_tensor[p, q, p, r] += weights[0]
+        operator.two_body_tensor[p, r, p, q] += weights[0].conjugate()
+        operator.two_body_tensor[p, q, q, r] += weights[1]
+        operator.two_body_tensor[q, r, p, q] += weights[1].conjugate()
+        operator.two_body_tensor[p, r, q, r] += weights[2]
+        operator.two_body_tensor[q, r, p, r] += weights[2].conjugate()
 
 
 @cirq.value_equality(approximate=True)
@@ -651,6 +687,20 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
         if any(weights):
             return cls(cast(Tuple[complex, complex, complex], weights))
         return None
+
+    def to_interaction_operator(self,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        weights = tuple(
+                w * self._exponent for w in self.weights)
+        operator.constant += self._exponent * self._global_shift
+        p, q, r, s = modes
+        operator.two_body_tensor[p, s, q, r] += weights[0]
+        operator.two_body_tensor[q, r, p, s] += weights[0].conjugate()
+        operator.two_body_tensor[p, r, q, s] += weights[1]
+        operator.two_body_tensor[q, s, p, r] += weights[1].conjugate()
+        operator.two_body_tensor[p, q, r, s] += weights[2]
+        operator.two_body_tensor[r, s, p, q] += weights[2].conjugate()
 
     @property
     def generator(self):

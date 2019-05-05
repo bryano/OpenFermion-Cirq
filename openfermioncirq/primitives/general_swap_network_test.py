@@ -21,13 +21,14 @@ import scipy.linalg as la
 
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
-        fermionic_simulation_gates_from_interaction_operator)
+        fermionic_simulation_gates_from_interaction_operator,
+        interaction_operator_from_fermionic_simulation_gates)
 from openfermioncirq.primitives.general_swap_network import (
-        untrotterize, trotter_circuit, trotter_unitary)
+        trotter_circuit, trotter_unitary)
 
 
 @pytest.mark.parametrize('order,hamiltonian',
-    [(order, ofc.testing.random_interaction_operator_term(order))
+    [(order, ofc.testing.random_interaction_operator_term(order, real=False))
      for order in (1, 2, 3, 4) for _ in range(5)])
 def test_trotterize_term(order, hamiltonian):
     n_orbitals = order
@@ -53,7 +54,7 @@ def test_trotterize_term(order, hamiltonian):
 
 
 @pytest.mark.parametrize('order,hamiltonian',
-    [(order, openfermion.utils._testing_utils.random_interaction_operator(5))
+    [(order, openfermion.utils._testing_utils.random_interaction_operator(5, real=False))
      for order in (1, 2, 3, 4) for _ in range(2)])
 def test_trotterize(order, hamiltonian):
     hamiltonian = hamiltonian.projected(order, True)
@@ -82,7 +83,7 @@ def test_untrotterize_linear(constant, potential):
     global_shift = constant / (exponent * np.pi)
     gates = {
             (0,): cirq.ZPowGate(exponent=exponent, global_shift=global_shift)}
-    hamiltonian = untrotterize(2, gates)
+    hamiltonian = interaction_operator_from_fermionic_simulation_gates(2, gates)
     assert np.isclose(hamiltonian.constant, constant)
     assert np.allclose(hamiltonian.one_body_tensor, [[potential, 0], [0, 0]])
     assert np.allclose(hamiltonian.two_body_tensor, np.zeros((2,) * 4))
@@ -90,20 +91,25 @@ def test_untrotterize_linear(constant, potential):
 
 @pytest.mark.parametrize('constant,tunneling,interaction,scale',
     [(0,0,0,1), (1, 1, 1, 1), (0.2, -0.5, 1.7, 0.3), (-0.1, -0.5, 1, -1)] +
-    [np.random.standard_normal(4) for _ in range(3)])
+    [(np.random.standard_normal(),
+      np.random.standard_normal() + 1j * np.random.standard_normal(),
+      np.random.standard_normal(),
+      np.random.standard_normal())
+        for _ in range(3)])
 def test_untrotterize_quadratic(constant, tunneling, interaction, scale):
     weights = (-tunneling, interaction)
     gate = ofc.QuadraticFermionicSimulationGate(
             weights, exponent=scale, global_shift=constant)
     gates = {(0, 1): gate}
-    hamiltonian = untrotterize(2, gates)
+    hamiltonian = interaction_operator_from_fermionic_simulation_gates(2, gates)
     expected_constant = constant * scale
     assert np.isclose(hamiltonian.constant, expected_constant)
-    expected_one_body_tensor = np.zeros((2, 2))
-    expected_one_body_tensor[0, 1] = expected_one_body_tensor[1, 0] = tunneling
+    expected_one_body_tensor = np.zeros((2, 2), dtype=np.complex128)
+    expected_one_body_tensor[0, 1] = tunneling
+    expected_one_body_tensor[1, 0] = tunneling.conjugate()
     expected_one_body_tensor *= scale
     assert np.allclose(hamiltonian.one_body_tensor, expected_one_body_tensor)
-    expected_two_body_tensor = np.zeros((2,) * 4)
+    expected_two_body_tensor = np.zeros((2,) * 4, dtype=np.complex128)
     expected_two_body_tensor[0, 1, 0, 1] = interaction
     expected_two_body_tensor *= scale
     assert np.allclose(hamiltonian.two_body_tensor, expected_two_body_tensor)
@@ -111,49 +117,49 @@ def test_untrotterize_quadratic(constant, tunneling, interaction, scale):
 
 @pytest.mark.parametrize('constant,coeffs,scale',
     [(np.random.standard_normal(),
-      np.random.standard_normal(3),
+      np.random.standard_normal(3) + 1j * np.random.standard_normal(3),
       np.random.standard_normal()) for _ in range(10)])
 def test_untrotterize_cubic(constant, coeffs, scale):
     gate = ofc.CubicFermionicSimulationGate(
             weights=coeffs, exponent=scale, global_shift=constant)
     gates = {(0, 1, 2): gate}
-    hamiltonian = untrotterize(3, gates)
+    hamiltonian = interaction_operator_from_fermionic_simulation_gates(3, gates)
     expected_constant = constant * scale
     assert np.isclose(hamiltonian.constant, expected_constant)
     assert np.allclose(hamiltonian.one_body_tensor, np.zeros((3, 3)))
-    expected_two_body_tensor = np.zeros((3,) * 4)
+    expected_two_body_tensor = np.zeros((3,) * 4, dtype=np.complex128)
     composite_indices = [((0, 1), (0, 2)), ((0, 1), (1, 2)), ((0, 2), (1, 2))]
     for (pq, rs), w in zip(composite_indices, coeffs):
         expected_two_body_tensor[pq + rs] = w
-        expected_two_body_tensor[rs + pq] = w
+        expected_two_body_tensor[rs + pq] = w.conjugate()
     expected_two_body_tensor *= scale
     assert np.allclose(hamiltonian.two_body_tensor, expected_two_body_tensor)
 
 
 @pytest.mark.parametrize('constant,coeffs,scale',
     [(np.random.standard_normal(),
-      np.random.standard_normal(3),
+      np.random.standard_normal(3) + 1j * np.random.standard_normal(3),
       np.random.standard_normal()) for _ in range(10)])
 def test_untrotterize_quartic(constant, coeffs, scale):
     gate = ofc.QuarticFermionicSimulationGate(
             weights=coeffs, exponent=scale, global_shift=constant)
     gates = {(0, 1, 2, 3): gate}
-    hamiltonian = untrotterize(4, gates)
+    hamiltonian = interaction_operator_from_fermionic_simulation_gates(4, gates)
     expected_constant = constant * scale
     assert np.isclose(hamiltonian.constant, expected_constant)
     assert np.allclose(hamiltonian.one_body_tensor, np.zeros((4, 4)))
-    expected_two_body_tensor = np.zeros((4,) * 4)
+    expected_two_body_tensor = np.zeros((4,) * 4, dtype=np.complex128)
     composite_indices = [((0, 3), (1, 2)), ((0, 2), (1, 3)), ((0, 1), (2, 3))]
     for (pq, rs), w in zip(composite_indices, coeffs):
         expected_two_body_tensor[pq + rs] = w
-        expected_two_body_tensor[rs + pq] = w
+        expected_two_body_tensor[rs + pq] = w.conjugate()
     expected_two_body_tensor *= scale
-    assert np.allclose(np.mod(hamiltonian.two_body_tensor, 2 * np.pi),
-                       np.mod(expected_two_body_tensor, 2 * np.pi))
+    diff = np.abs(hamiltonian.two_body_tensor - expected_two_body_tensor) / (2 * np.pi)
+    assert np.allclose(diff, np.around(diff))
 
 
 @pytest.mark.parametrize('hamiltonian',
-    [openfermion.utils._testing_utils.random_interaction_operator(5)
+    [openfermion.utils._testing_utils.random_interaction_operator(5, real=False)
     for _ in range(10)])
 def test_untrotterize(hamiltonian):
     hamiltonian.constant = 0
@@ -163,11 +169,11 @@ def test_untrotterize(hamiltonian):
 
     gates = fermionic_simulation_gates_from_interaction_operator(hamiltonian)
 
-    other_hamiltonian = untrotterize(n_modes, gates)
+    other_hamiltonian = interaction_operator_from_fermionic_simulation_gates(n_modes, gates)
     other_normal_ordered_hamiltonian = (
             openfermion.normal_ordered(other_hamiltonian))
-    foo = normal_ordered_hamiltonian.one_body_tensor
-    bar = other_normal_ordered_hamiltonian.one_body_tensor
-    normal_ordered_hamiltonian %= 2 * np.pi
-    other_normal_ordered_hamiltonian %= 2 * np.pi
-    assert normal_ordered_hamiltonian == other_normal_ordered_hamiltonian
+    diff = normal_ordered_hamiltonian - other_normal_ordered_hamiltonian
+    assert np.allclose(diff.constant, 0)
+    assert np.allclose(diff.one_body_tensor, np.zeros_like(diff.one_body_tensor))
+    abs_two_body_diff = np.abs(diff.two_body_tensor) / (2 * np.pi)
+    assert np.allclose(abs_two_body_diff, np.around(abs_two_body_diff))
