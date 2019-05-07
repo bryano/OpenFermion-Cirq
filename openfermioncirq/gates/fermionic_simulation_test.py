@@ -14,12 +14,12 @@ import itertools
 import random
 from typing import cast, Tuple
 
-import cirq
-import scipy.linalg as la
 import numpy as np
 import pytest
+import scipy.linalg as la
 import sympy
 
+import cirq
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
         state_swap_eigen_component)

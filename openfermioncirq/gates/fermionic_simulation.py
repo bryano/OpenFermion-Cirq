@@ -10,15 +10,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import abc
 import itertools
+from numbers import Complex, Real
 from typing import cast, Dict, Iterable, Optional, Sequence, Tuple, Union
 
-import cirq
 import numpy as np
 import openfermion
 import scipy.linalg as la
 import sympy
 
+import cirq
 from openfermioncirq.gates.common_gates import XXYYPowGate
 
 
@@ -140,9 +142,22 @@ def interaction_operator_from_fermionic_simulation_gates(
     return operator
 
 
+class FermionicSimulationGate(cirq.EigenGate):
+
+    @abc.abstractproperty
+    def generator(self):
+        pass
+
+    def _resolve_parameters_(self, resolver):
+        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
+        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
+        resolved_global_shift = cirq.resolve_parameters(
+                self._global_shift, resolver)
+        return type(self)(resolved_weights, exponent = resolved_exponent,
+                          global_shift = resolved_global_shift)
 
 class QuadraticFermionicSimulationGate(
-        cirq.EigenGate,
+        FermionicSimulationGate,
         cirq.InterchangeableQubitsGate,
         cirq.TwoQubitGate):
     """(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
@@ -244,14 +259,6 @@ class QuadraticFermionicSimulationGate(
         generator[3, 3] = self.weights[1]
         return generator
 
-    def _resolve_parameters_(self, resolver):
-        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
-        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
-        resolved_global_shift = cirq.resolve_parameters(
-                self._global_shift, resolver)
-        return type(self)(resolved_weights, exponent = resolved_exponent,
-                          global_shift = resolved_global_shift)
-
     def to_interaction_operator(self,
             operator: openfermion.InteractionOperator,
             modes: Tuple[int, int]):
@@ -264,7 +271,7 @@ class QuadraticFermionicSimulationGate(
 
 @cirq.value_equality(approximate=True)
 class CubicFermionicSimulationGate(
-        cirq.EigenGate,
+        FermionicSimulationGate,
         cirq.ThreeQubitGate):
     """w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
@@ -395,7 +402,7 @@ class CubicFermionicSimulationGate(
 
 
 @cirq.value_equality(approximate=True)
-class QuarticFermionicSimulationGate(cirq.EigenGate):
+class QuarticFermionicSimulationGate(FermionicSimulationGate):
     """Rotates Hamming-weight 2 states into their bitwise complements.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
@@ -717,10 +724,4 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
         generator[3, 12] = self.weights[2].conjugate()
         return generator
 
-    def _resolve_parameters_(self, resolver):
-        resolved_weights = cirq.resolve_parameters(self.weights, resolver)
-        resolved_exponent = cirq.resolve_parameters(self._exponent, resolver)
-        resolved_global_shift = cirq.resolve_parameters(
-                self._global_shift, resolver)
-        return type(self)(resolved_weights, exponent = resolved_exponent,
-                          global_shift = resolved_global_shift)
+
