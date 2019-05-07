@@ -71,6 +71,22 @@ def random_fermionic_simulation_gate(order):
     if order == 4:
         return ofc.QuarticFermionicSimulationGate(weights, exponent=exponent)
 
+def assert_symbolic_decomposition_consistent(gate):
+    expected_unitary = cirq.unitary(gate)
+    
+    weights = tuple(sympy.Symbol(f'w{i}') for i in range(gate.num_weights))
+    exponent = sympy.Symbol('t')
+    symbolic_gate = type(gate)(weights, exponent=exponent)
+    qubits = cirq.LineQubit.range(gate.num_qubits())
+    circuit = cirq.Circuit.from_ops(symbolic_gate._decompose_(qubits))
+    resolver = {'t': gate.exponent}
+    for i, w in enumerate(gate.weights):
+        resolver[f'w{i}'] = w
+    resolved_circuit = cirq.resolve_parameters(circuit, resolver)
+    decomp_unitary = resolved_circuit.to_unitary_matrix(qubit_order=qubits)
+
+    assert np.allclose(expected_unitary, decomp_unitary)
+
 quadratic_gates = ([ofc.QuadraticFermionicSimulationGate(weights) for weights in
     [cast(Tuple[float, float], (1, 1)), (1, 0), (0, 1), (0, 0)]] +
     [random_fermionic_simulation_gate(2) for _ in range(5)])
@@ -109,28 +125,9 @@ def test_weights_and_exponent(weights):
         assert new_gate.exponent == new_exponent
 
 
-@pytest.mark.parametrize('weights,exponent', [
-    ((np.random.uniform(-5, 5) + 1j * np.random.uniform(-5, 5),
-        np.random.uniform(-5, 5)), np.random.uniform(-5, 5)) for _ in range(5)
-])
-def test_quadratic_fermionic_simulation_gate_symbolic_decompose(
-        weights, exponent):
-    gate  = ofc.QuadraticFermionicSimulationGate(weights, exponent=exponent)
-    generator = gate.generator
-    expected_unitary = la.expm(-1j * exponent * generator)
-
-    symbolic_gate = (
-            ofc.QuadraticFermionicSimulationGate(
-                (sympy.Symbol('w0'), sympy.Symbol('w1')),
-                exponent=sympy.Symbol('t')))
-    qubits = cirq.LineQubit.range(2)
-    circuit = cirq.Circuit.from_ops(symbolic_gate._decompose_(qubits))
-    resolver = {'w0': weights[0], 'w1': weights[1], 't': exponent}
-    resolved_circuit = cirq.resolve_parameters(circuit, resolver)
-    decomp_unitary = resolved_circuit.to_unitary_matrix(qubit_order=qubits)
-
-    assert np.allclose(expected_unitary, decomp_unitary)
-
+@pytest.mark.parametrize('gate', quadratic_gates)
+def test_quadratic_fermionic_simulation_gate_symbolic_decompose(gate):
+    assert_symbolic_decomposition_consistent(gate)
 
 
 def test_cubic_fermionic_simulation_gate_equality():
