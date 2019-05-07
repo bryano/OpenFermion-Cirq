@@ -143,6 +143,26 @@ def interaction_operator_from_fermionic_simulation_gates(
 
 
 class FermionicSimulationGate(cirq.EigenGate):
+    """TODO"""
+
+    def __init__(self,
+                 weights: Tuple[complex, ...]=None,
+                 absorb_exponent: bool = False,
+                 **kwargs) -> None:
+        """TODO"""
+        if weights is None:
+            weights = (1.,) * self.num_weights
+        self.weights = weights
+
+        super().__init__(**kwargs)
+
+        if absorb_exponent:
+            self.absorb_exponent_into_weights()
+
+    @abc.abstractproperty
+    def num_weights(self) -> int:
+        """TODO"""
+        pass
 
     @abc.abstractproperty
     def generator(self):
@@ -178,6 +198,20 @@ class FermionicSimulationGate(cirq.EigenGate):
                 for V in self._value_equality_values_()
                 for v in V)
 
+    def absorb_exponent_into_weights(self):
+        period = (2 * sympy.pi) if self._is_parameterized_() else 2 * (np.pi)
+        new_weights = []
+        for weight in self.weights:
+            if not weight:
+                new_weights.append(weight)
+                continue
+            old_abs = abs(weight)
+            new_abs = (old_abs * self._exponent) % period
+            new_weights.append(weight * new_abs / old_abs)
+        self.weights = tuple(new_weights)
+        self._global_shift *= self._exponent
+        self._exponent = 1
+
 
 class QuadraticFermionicSimulationGate(
         FermionicSimulationGate,
@@ -212,12 +246,9 @@ class QuadraticFermionicSimulationGate(
         weights: The weights of the terms in the Hamiltonian.
     """
 
-    def __init__(self,
-                 weights: Tuple[complex, complex]=(1, 1),
-                 **kwargs) -> None:
-        self.weights = weights
-
-        super().__init__(**kwargs)
+    @property
+    def num_weights(self):
+        return 2
 
     def _decompose_(self, qubits):
         r = 2 * abs(self.weights[0]) / np.pi
@@ -329,14 +360,9 @@ class CubicFermionicSimulationGate(
         weights: The weights of the terms in the Hamiltonian.
     """
 
-    def __init__(self,
-                 weights: Tuple[complex, complex, complex]=(1., 1., 1.),
-                 **kwargs) -> None:
-
-        assert len(weights) == 3
-        self.weights = weights
-
-        super().__init__(**kwargs)
+    @property
+    def num_weights(self):
+        return 3
 
     def _eigen_components(self):
         components = [(0, np.diag([1, 1, 1, 0, 1, 0, 0, 1]))]
@@ -451,53 +477,9 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
         weights: The weights of the terms in the Hamiltonian.
     """
 
-    def __init__(self,
-                 weights: Tuple[complex, complex, complex]=(1, 1, 1),
-                 absorb_exponent: bool=True,
-                 *,  # Forces keyword args.
-                 exponent: Optional[Union[sympy.Symbol, float]]=None,
-                 rads: Optional[float]=None,
-                 degs: Optional[float]=None,
-                 duration: Optional[float]=None,
-                 **kwargs
-                 ) -> None:
-        """Initialize the gate.
-
-        At most one of exponent, rads, degs, or duration may be specified.
-        If more are specified, the result is considered ambiguous and an
-        error is thrown. If no argument is given, the default value of one
-        half-turn is used.
-
-        Args:
-            weights: The weights of the terms in the Hamiltonian.
-            absorb_exponent: Whether to absorb the given exponent into the
-                weights. If true, the exponent of the returned gate is 1.
-            exponent: The exponent angle, in half-turns.
-            rads: The exponent angle, in radians.
-            degs: The exponent angle, in degrees.
-            duration: The exponent as a duration of time.
-        """
-
-        assert len(weights) == 3
-        self.weights = weights
-
-        if len([1 for e in [exponent, rads, degs, duration]
-                if e is not None]) > 1:
-            raise ValueError('Redundant exponent specification. '
-                             'Use ONE of exponent, rads, degs, or duration.')
-
-        if duration is not None:
-            exponent = 2 * duration / np.pi
-        else:
-            exponent = cirq.chosen_angle_to_half_turns(
-                half_turns=exponent,
-                rads=rads,
-                degs=degs)
-
-        super().__init__(exponent=exponent, **kwargs)
-
-        if absorb_exponent:
-            self.absorb_exponent_into_weights()
+    @property
+    def num_weights(self):
+        return 3
 
     def num_qubits(self):
         return 4
@@ -630,19 +612,6 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
         return cirq.CircuitDiagramInfo(wire_symbols=wire_symbols,
                                        exponent=self._diagram_exponent(args))
 
-    def absorb_exponent_into_weights(self):
-        period = (2 * sympy.pi) if self._is_parameterized_() else 2 * (np.pi)
-        new_weights = []
-        for weight in self.weights:
-            if not weight:
-                new_weights.append(weight)
-                continue
-            old_abs = abs(weight)
-            new_abs = (old_abs * self._exponent) % period
-            new_weights.append(weight * new_abs / old_abs)
-        self.weights = tuple(new_weights)
-        self._global_shift *= self._exponent
-        self._exponent = 1
 
     def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs
                         ) -> Optional[np.ndarray]:
@@ -725,5 +694,3 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
         generator[12, 3] = self.weights[2]
         generator[3, 12] = self.weights[2].conjugate()
         return generator
-
-
