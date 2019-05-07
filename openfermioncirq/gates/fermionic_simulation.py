@@ -146,7 +146,7 @@ class FermionicSimulationGate(cirq.EigenGate):
     """TODO"""
 
     def __init__(self,
-                 weights: Tuple[complex, ...]=None,
+                 weights: Optional[Tuple[complex, ...]]=None,
                  absorb_exponent: bool = False,
                  **kwargs) -> None:
         """TODO"""
