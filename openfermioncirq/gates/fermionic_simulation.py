@@ -38,7 +38,7 @@ def _canonicalize_weight(w):
     if cirq.is_parameterized(w):
         return (cirq.PeriodicValue(abs(w), 2 * sympy.pi), sympy.arg(w))
     period = 2 * np.pi
-    return (np.round((w % period) if (w == np.real(w)) else
+    return (np.round((w.real % period) if (w == np.real(w)) else
         (abs(w) % period) * w / abs(w), 8), 0)
 
 
@@ -146,7 +146,20 @@ class FermionicSimulationGate(cirq.EigenGate):
 
     @abc.abstractproperty
     def generator(self):
-        pass
+        """TODO"""
+
+    @classmethod
+    @abc.abstractmethod
+    def from_interaction(cls,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        """TODO"""
+
+    @abc.abstractmethod
+    def to_interaction_operator(self,
+            operator: openfermion.InteractionOperator,
+            modes: Iterable[int]):
+        """TODO"""
 
     def _resolve_parameters_(self, resolver):
         resolved_weights = cirq.resolve_parameters(self.weights, resolver)
@@ -155,6 +168,16 @@ class FermionicSimulationGate(cirq.EigenGate):
                 self._global_shift, resolver)
         return type(self)(resolved_weights, exponent = resolved_exponent,
                           global_shift = resolved_global_shift)
+
+    def _value_equality_values_(self):
+        return tuple(_canonicalize_weight(w * self.exponent)
+                for w in list(self.weights) + [self._global_shift])
+
+    def _is_parameterized_(self) -> bool:
+        return any(cirq.is_parameterized(v)
+                for V in self._value_equality_values_()
+                for v in V)
+
 
 class QuadraticFermionicSimulationGate(
         FermionicSimulationGate,
@@ -195,9 +218,6 @@ class QuadraticFermionicSimulationGate(
         self.weights = weights
 
         super().__init__(**kwargs)
-
-    def num_qubits(self):
-        return 2
 
     def _decompose_(self, qubits):
         r = 2 * abs(self.weights[0]) / np.pi
@@ -334,15 +354,6 @@ class CubicFermionicSimulationGate(
                     np.outer(eig_vec.conjugate(), eig_vec))
             components.append((exp_factor, proj))
         return components
-
-    def _value_equality_values_(self):
-        return tuple(_canonicalize_weight(w * self.exponent)
-                for w in list(self.weights) + [self._global_shift])
-
-    def _is_parameterized_(self) -> bool:
-        return any(cirq.is_parameterized(v)
-                for V in self._value_equality_values_()
-                for v in V)
 
     def __repr__(self):
         return (
@@ -662,15 +673,6 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
                                            cm,
                                            slices=[c1, c2],
                                            out=args.available_buffer)
-
-    def _value_equality_values_(self):
-        return tuple(_canonicalize_weight(w * self.exponent)
-                for w in list(self.weights) + [self._global_shift])
-
-    def _is_parameterized_(self) -> bool:
-        return any(cirq.is_parameterized(v)
-                for V in self._value_equality_values_()
-                for v in V)
 
     def __repr__(self):
         return (
