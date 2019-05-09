@@ -109,6 +109,20 @@ def test_fermionic_simulation_gate(gate):
     assert np.allclose(expected_unitary, actual_unitary)
 
 
+@pytest.mark.parametrize('gate', gates)
+def test_fswap(gate):
+    n_qubits = gate.num_qubits()
+    qubits = cirq.LineQubit.range(n_qubits)
+    for i in range(n_qubits - 1):
+        fswap = cirq.kron(np.eye(1 << i), cirq.unitary(ofc.FSWAP),
+                np.eye(1 << (n_qubits - i - 2)))
+        assert fswap.shape == (1 << n_qubits,) * 2
+        generator = gate.generator
+        fswapped_generator = np.linalg.multi_dot([fswap, generator, fswap])
+        gate.fswap(i)
+        assert np.allclose(gate.generator, fswapped_generator)
+
+
 @pytest.mark.parametrize('weights', np.random.rand(10, 3))
 def test_weights_and_exponent(weights):
     exponents = np.linspace(-1, 1, 8)

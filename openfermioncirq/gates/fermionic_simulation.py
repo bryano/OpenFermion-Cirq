@@ -319,6 +319,9 @@ class QuadraticFermionicSimulationGate(
         operator.one_body_tensor[modes[::-1]] -= weights[0].conjugate()
         operator.two_body_tensor[modes * 2] += weights[1]
 
+    def fswap(self, i: int = 0):
+        self.weights = (self.weights[0].conjugate(), self.weights[1])
+
 
 @cirq.value_equality(approximate=True)
 class CubicFermionicSimulationGate(
@@ -437,6 +440,13 @@ class CubicFermionicSimulationGate(
         operator.two_body_tensor[p, r, q, r] += weights[2]
         operator.two_body_tensor[q, r, p, r] += weights[2].conjugate()
 
+    def fswap(self, i: int):
+        if i == 0:
+            self.weights = (-self.weights[1], -self.weights[0],
+                    self.weights[2].conjugate())
+        elif i == 1:
+            self.weights = (self.weights[0].conjugate(), -self.weights[2],
+                    -self.weights[1])
 
 @cirq.value_equality(approximate=True)
 class QuarticFermionicSimulationGate(FermionicSimulationGate):
@@ -694,3 +704,12 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
         generator[12, 3] = self.weights[2]
         generator[3, 12] = self.weights[2].conjugate()
         return generator
+
+    def fswap(self, i: int):
+        if i == 0:
+            self.weights = (self.weights[1].conjugate(),
+                    self.weights[0].conjugate(), -self.weights[2])
+        elif i == 1:
+            self.weights = (-self.weights[0], self.weights[2], self.weights[1])
+        elif i == 2:
+            self.weights = (self.weights[1], self.weights[0], -self.weights[2])
