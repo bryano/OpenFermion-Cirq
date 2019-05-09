@@ -87,9 +87,12 @@ def assert_symbolic_decomposition_consistent(gate):
 
     assert np.allclose(expected_unitary, decomp_unitary)
 
-quadratic_gates = ([ofc.QuadraticFermionicSimulationGate(weights) for weights in
-    [cast(Tuple[float, float], (1, 1)), (1, 0), (0, 1), (0, 0)]] +
-    [random_fermionic_simulation_gate(2) for _ in range(5)])
+random_quadratic_gates = [
+        random_fermionic_simulation_gate(2) for _ in range(5)]
+manual_quadratic_gates = [ofc.QuadraticFermionicSimulationGate(weights)
+        for weights in
+        [cast(Tuple[float, float], (1, 1)), (1, 0), (0, 1), (0, 0)]]
+quadratic_gates = random_quadratic_gates + manual_quadratic_gates
 cubic_gates = ([ofc.CubicFermionicSimulationGate()] + 
     [random_fermionic_simulation_gate(3) for _ in range(5)])
 quartic_gates = ([ofc.QuarticFermionicSimulationGate()] + 
@@ -125,7 +128,7 @@ def test_weights_and_exponent(weights):
         assert new_gate.exponent == new_exponent
 
 
-@pytest.mark.parametrize('gate', quadratic_gates)
+@pytest.mark.parametrize('gate', random_quadratic_gates)
 def test_quadratic_fermionic_simulation_gate_symbolic_decompose(gate):
     assert_symbolic_decomposition_consistent(gate)
 
