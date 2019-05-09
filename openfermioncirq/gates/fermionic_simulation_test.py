@@ -20,6 +20,7 @@ import scipy.linalg as la
 import sympy
 
 import cirq
+import cirq.contrib.acquaintance as cca
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
         state_swap_eigen_component)
@@ -87,6 +88,39 @@ def assert_symbolic_decomposition_consistent(gate):
 
     assert np.allclose(expected_unitary, decomp_unitary)
 
+def assert_fswap_consistent(gate):
+    n_qubits = gate.num_qubits()
+    qubits = cirq.LineQubit.range(n_qubits)
+    for i in range(n_qubits - 1):
+        fswap = cirq.kron(np.eye(1 << i), cirq.unitary(ofc.FSWAP),
+                np.eye(1 << (n_qubits - i - 2)))
+        assert fswap.shape == (1 << n_qubits,) * 2
+        generator = gate.generator
+        fswapped_generator = np.linalg.multi_dot([fswap, generator, fswap])
+        gate.fswap(i)
+        assert np.allclose(gate.generator, fswapped_generator)
+
+
+def assert_permute_consistent(gate):
+    n_qubits = gate.num_qubits()
+    qubits = cirq.LineQubit.range(n_qubits)
+    for pos in itertools.permutations(range(n_qubits)):
+        permuted_gate = gate.__copy__()
+        gate.permute(pos)
+        actual_unitary = cirq.unitary(permuted_gate)
+
+        ops = [
+            cca.LinearPermutationGate(n_qubits,
+                dict(zip(range(n_qubits), pos)), ofc.FSWAP)(*qubits),
+            gate(*qubits),
+            cca.LinearPermutationGate(n_qubits,
+                dict(zip(pos, range(n_qubits))), ofc.FSWAP)(*qubits)
+            ]
+        circuit = cirq.Circuit.from_ops(ops)
+        expected_unitary = cirq.unitary(circuit)
+        assert np.allclose(actual_unitary, expected_unitary)
+
+
 random_quadratic_gates = [
         random_fermionic_simulation_gate(2) for _ in range(5)]
 manual_quadratic_gates = [ofc.QuadraticFermionicSimulationGate(weights)
@@ -107,20 +141,9 @@ def test_fermionic_simulation_gate(gate):
     expected_unitary = la.expm(-1j * gate.exponent * generator)
     actual_unitary = cirq.unitary(gate)
     assert np.allclose(expected_unitary, actual_unitary)
-
-
-@pytest.mark.parametrize('gate', gates)
-def test_fswap(gate):
-    n_qubits = gate.num_qubits()
-    qubits = cirq.LineQubit.range(n_qubits)
-    for i in range(n_qubits - 1):
-        fswap = cirq.kron(np.eye(1 << i), cirq.unitary(ofc.FSWAP),
-                np.eye(1 << (n_qubits - i - 2)))
-        assert fswap.shape == (1 << n_qubits,) * 2
-        generator = gate.generator
-        fswapped_generator = np.linalg.multi_dot([fswap, generator, fswap])
-        gate.fswap(i)
-        assert np.allclose(gate.generator, fswapped_generator)
+    
+    assert_fswap_consistent(gate)
+    assert_permute_consistent(gate)
 
 
 @pytest.mark.parametrize('weights', np.random.rand(10, 3))

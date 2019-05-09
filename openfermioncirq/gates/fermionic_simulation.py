@@ -93,9 +93,9 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float=0):
 
 def fermionic_simulation_gates_from_interaction_operator(
         operator: openfermion.InteractionOperator):
-    """
-    Returns gates $\left\{G_a\\right\} = \left\{e^{i H_a\\right\}$ such that
-    $e^{i H} ~ \\prod_a e^{i H_a}$.
+    r"""
+    Returns gates $\left\{G_a\right\} = \left\{e^{i H_a\right\}$ such that
+    $e^{i H} ~ \prod_a e^{i H_a}$.
 
     Args:
         operator: The interaction operator.
@@ -172,13 +172,13 @@ class FermionicSimulationGate(cirq.EigenGate):
     @abc.abstractmethod
     def from_interaction(cls,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         """TODO"""
 
     @abc.abstractmethod
     def to_interaction_operator(self,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         """TODO"""
 
     def _resolve_parameters_(self, resolver):
@@ -212,12 +212,34 @@ class FermionicSimulationGate(cirq.EigenGate):
         self._global_shift *= self._exponent
         self._exponent = 1
 
+    def permute(self, init_pos: Sequence[int]):
+        I = range(self.num_qubits())
+        if sorted(init_pos) != list(I):
+            raise ValueError(f'{init_pos} is not a permutation of {I}.')
+        curr_pos = list(init_pos)
+        for i in I:
+            for j in I[i % 2:-1:2]:
+                if curr_pos[j] > curr_pos[j + 1]:
+                    self.fswap(j)
+                    curr_pos[j: j + 2] = reversed(curr_pos[j: j + 2])
+        assert curr_pos == list(I)
+
+    def permuted(self, init_pos: Sequence[int]):
+        gate = self.__copy__()
+        gate.permute(init_pos)
+        return gate
+
+    def __copy__(self):
+        return type(self)(self.weights,
+                exponent=self.exponent, global_shift=self._global_shift)
+                
+            
 
 class QuadraticFermionicSimulationGate(
         FermionicSimulationGate,
         cirq.InterchangeableQubitsGate,
         cirq.TwoQubitGate):
-    """(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
+    r"""(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
 
     With weights :math:`(w_0, w_1)` and exponent :math:`t`, this gate's matrix
     is defined as
@@ -228,14 +250,14 @@ class QuadraticFermionicSimulationGate(
     where
 
     .. math::
-        H = \left(w_0 \left| 10 \\right\\rangle\left\langle 01 \\right| +
-                \\text{h.c.}\\right) -
-            w_1 \left| 11 \\right\\rangle \left\langle 11 \\right|.
+        H = \left(w_0 \left| 10 \right\rangle\left\langle 01 \right| +
+                \text{h.c.}\right) -
+            w_1 \left| 11 \right\rangle \left\langle 11 \right|.
 
     This corresponds to the Jordan-Wigner transform of
 
     .. math::
-        H = (w_0 a^{\dagger}_i a_{i+1} + \\text{h.c.}) +
+        H = (w_0 a^{\dagger}_i a_{i+1} + \text{h.c.}) +
              w_1 a_{i}^{\dagger} a_{i+1}^{\dagger} a_{i} a_{i+1},
 
     where :math:`a_i` and  :math:`a_{i+1}` are the annihilation operators for
@@ -286,7 +308,7 @@ class QuadraticFermionicSimulationGate(
     @classmethod
     def from_interaction(cls,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         p, q = modes
         tunneling_coeff = operator.one_body_tensor[p, q]
         interaction_coeff = (
@@ -312,12 +334,12 @@ class QuadraticFermionicSimulationGate(
 
     def to_interaction_operator(self,
             operator: openfermion.InteractionOperator,
-            modes: Tuple[int, int]):
+            modes: Sequence[int]):
         weights = tuple(w * self._exponent for w in self.weights)
         operator.constant += self._exponent * self._global_shift
         operator.one_body_tensor[modes] -= weights[0]
         operator.one_body_tensor[modes[::-1]] -= weights[0].conjugate()
-        operator.two_body_tensor[modes * 2] += weights[1]
+        operator.two_body_tensor[tuple(modes) * 2] += weights[1]
 
     def fswap(self, i: int = 0):
         self.weights = (self.weights[0].conjugate(), self.weights[1])
@@ -327,7 +349,7 @@ class QuadraticFermionicSimulationGate(
 class CubicFermionicSimulationGate(
         FermionicSimulationGate,
         cirq.ThreeQubitGate):
-    """w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
+    r"""w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
     matrix is defined as
@@ -338,22 +360,22 @@ class CubicFermionicSimulationGate(
     where
 
     .. math::
-        H = \left(w_0 \left| 110 \\right\\rangle\left\langle 101 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_1 \left| 110 \\right\\rangle\left\langle 011 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_2 \left| 101 \\right\\rangle\left\langle 011 \\right| +
-                \\text{h.c.}\\right)
+        H = \left(w_0 \left| 110 \right\rangle\left\langle 101 \right| +
+                \text{h.c.}\right) +
+            \left(w_1 \left| 110 \right\rangle\left\langle 011 \right| +
+                \text{h.c.}\right) +
+            \left(w_2 \left| 101 \right\rangle\left\langle 011 \right| +
+                \text{h.c.}\right)
 
     This corresponds to the Jordan-Wigner transform of
 
     .. math::
         H = -\left(w_0 a^{\dagger}_i a^{\dagger}_{i+1} a_{i} a_{i+2} +
-                   \\text{h.c.}\\right) -
+                   \text{h.c.}\right) -
             \left(w_1 a^{\dagger}_i a^{\dagger}_{i+1} a_{i+1} a_{i+2} +
-                  \\text{h.c.}\\right) -
+                  \text{h.c.}\right) -
             \left(w_2 a^{\dagger}_i a^{\dagger}_{i+2} a_{i+1} a_{i+2} +
-                  \\text{h.c.}\\right),
+                  \text{h.c.}\right),
 
     where :math:`a_i`, :math:`a_{i+1}`, :math:`a_{i+2}` are the annihilation
     operators for the fermionic modes :math:`i`, :math:`(i+1)` :math:`(i+2)`,
@@ -399,7 +421,7 @@ class CubicFermionicSimulationGate(
     @classmethod
     def from_interaction(cls,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         i, j, k = modes
         weights = tuple(sgn * (
             operator.two_body_tensor[p, q, p, r] -
@@ -428,7 +450,7 @@ class CubicFermionicSimulationGate(
 
     def to_interaction_operator(self,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         weights = tuple(
                 w * self._exponent for w in self.weights)
         operator.constant += self._exponent * self._global_shift
@@ -450,7 +472,7 @@ class CubicFermionicSimulationGate(
 
 @cirq.value_equality(approximate=True)
 class QuarticFermionicSimulationGate(FermionicSimulationGate):
-    """Rotates Hamming-weight 2 states into their bitwise complements.
+    r"""Rotates Hamming-weight 2 states into their bitwise complements.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
     matrix is defined as
@@ -461,22 +483,22 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
     where
 
     .. math::
-        H = \left(w_0 \left| 1001 \\right\\rangle\left\langle 0110 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_1 \left| 1010 \\right\\rangle\left\langle 0101 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_2 \left| 1100 \\right\\rangle\left\langle 0011 \\right| +
-                \\text{h.c.}\\right)
+        H = \left(w_0 \left| 1001 \right\rangle\left\langle 0110 \right| +
+                \text{h.c.}\right) +
+            \left(w_1 \left| 1010 \right\rangle\left\langle 0101 \right| +
+                \text{h.c.}\right) +
+            \left(w_2 \left| 1100 \right\rangle\left\langle 0011 \right| +
+                \text{h.c.}\right)
 
     This corresponds to the Jordan-Wigner transform of
 
     .. math::
         H = -\left(w_0 a^{\dagger}_i a^{\dagger}_{i+3} a_{i+1} a_{i+2} +
-                   \\text{h.c.}\\right) -
+                   \text{h.c.}\right) -
             \left(w_1 a^{\dagger}_i a^{\dagger}_{i+2} a_{i+1} a_{i+3} +
-                  \\text{h.c.}\\right) -
+                  \text{h.c.}\right) -
             \left(w_2 a^{\dagger}_i a^{\dagger}_{i+1} a_{i+2} a_{i+3} +
-                  \\text{h.c.}\\right),
+                  \text{h.c.}\right),
 
     where :math:`a_i`, ..., :math:`a_{i+3}` are the annihilation operators for
     the fermionic modes :math:`i`, ..., :math:`(i+3)`, respectively
@@ -664,7 +686,7 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
     @classmethod
     def from_interaction(cls,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         i, j, k, l = modes
         weights = tuple((
             operator.two_body_tensor[p, q, r, s] -
@@ -678,7 +700,7 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
 
     def to_interaction_operator(self,
             operator: openfermion.InteractionOperator,
-            modes: Iterable[int]):
+            modes: Sequence[int]):
         weights = tuple(
                 w * self._exponent for w in self.weights)
         operator.constant += self._exponent * self._global_shift

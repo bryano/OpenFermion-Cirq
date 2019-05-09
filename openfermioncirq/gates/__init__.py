@@ -31,10 +31,10 @@ from openfermioncirq.gates.three_qubit_gates import (
     CYXXY,
     CXXYYPowGate,
     CYXXYPowGate,
-    rot111,
-    CombinedCXXYYPowGate)
+    rot111)
 
 from openfermioncirq.gates.fermionic_simulation import (
+    FermionicSimulationGate,
     QuadraticFermionicSimulationGate,
     CubicFermionicSimulationGate,
     QuarticFermionicSimulationGate,

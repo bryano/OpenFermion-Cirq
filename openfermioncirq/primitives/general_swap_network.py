@@ -41,19 +41,27 @@ class GreedyExecutionStrategy(cca.GreedyExecutionStrategy):
             qubits: Sequence[cirq.Qid],
             ) -> cirq.OP_TREE:
         index_set = frozenset(indices)
+        if index_set not in self.index_set_to_gates:
+            return
+
         n_indices = len(index_set)
         abs_to_rel = dict(zip(indices, range(n_indices)))
-        if index_set in self.index_set_to_gates:
-            gates = self.index_set_to_gates.pop(index_set)
-            for gate_indices, gate in sorted(gates.items()):
+        gates = self.index_set_to_gates.pop(index_set)
+        for gate_indices, gate in sorted(gates.items()):
+            if len(index_set) == 1:
+                yield gate(*qubits)
+            elif isinstance(gate, ofc_gates.FermionicSimulationGate):
+                pos = [abs_to_rel[i] for i in gate_indices]
+                yield gate.permuted(pos)(*qubits)
+            else:
                 perm = dict(zip((abs_to_rel[i] for i in gate_indices),
                     (abs_to_rel[j] for j in indices)))
                 reverse_perm = dict((j, i) for i, j in perm.items())
                 yield cca.LinearPermutationGate(n_indices, perm,
-                        ofc_gates.FSWAP)(*qubits)
+                    ofc_gates.FSWAP)(*qubits)
                 yield gate(*qubits)
                 yield cca.LinearPermutationGate(n_indices, reverse_perm,
-                        ofc_gates.FSWAP)(*qubits)
+                    ofc_gates.FSWAP)(*qubits)
 
 
 def trotter_circuit(
