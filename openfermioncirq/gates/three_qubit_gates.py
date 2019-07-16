@@ -14,9 +14,8 @@
 
 from typing import Optional, Tuple
 
-import numpy as np
-
 import cirq
+import numpy as np
 
 from openfermioncirq.gates import common_gates
 

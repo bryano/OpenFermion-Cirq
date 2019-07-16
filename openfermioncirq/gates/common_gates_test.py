@@ -15,6 +15,8 @@ import pytest
 from scipy.linalg import expm, kron
 import sympy
 
+import pytest
+
 import cirq
 import openfermioncirq as ofc
 

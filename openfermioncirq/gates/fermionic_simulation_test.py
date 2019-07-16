@@ -11,6 +11,7 @@
 #   limitations under the License.
 
 import itertools
+from typing import cast, Tuple
 
 import numpy as np
 import pytest
@@ -18,6 +19,7 @@ import scipy.linalg as la
 import sympy
 
 import cirq
+import cirq.contrib.acquaintance as cca
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
         state_swap_eigen_component)
@@ -52,56 +54,118 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
         expected_component[i, j] = expected_component[j, i] = sign * 0.5
         assert np.allclose(actual_component, expected_component)
 
+def random_real(size=None, mag=20):
+    return np.random.uniform(-mag, mag, size)
 
-def test_quadratic_fermionic_simulation_gate():
-    ofc.testing.assert_implements_consistent_protocols(
-        ofc.QuadraticFermionicSimulationGate())
+def random_complex(size=None, mag=20):
+    return random_real(size, mag) + 1j * random_real(size, mag)
 
+def random_fermionic_simulation_gate(order):
+    exponent = random_real()
+    if order == 2:
+        weights = (random_complex(), random_real())
+        return ofc.QuadraticFermionicSimulationGate(weights, exponent=exponent)
+    weights = random_complex(3)
+    if order == 3:
+        return ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
+    if order == 4:
+        return ofc.QuarticFermionicSimulationGate(weights, exponent=exponent)
 
-def test_quadratic_fermionic_simulation_gate_zero_weights():
-    gate = ofc.QuadraticFermionicSimulationGate((0, 0))
+def assert_symbolic_decomposition_consistent(gate):
+    expected_unitary = cirq.unitary(gate)
 
-    assert np.allclose(cirq.unitary(gate), np.eye(4))
-    cirq.testing.assert_decompose_is_consistent_with_unitary(gate)
-
-
-@pytest.mark.parametrize('weights,exponent', [
-    ((np.random.uniform(-5, 5) + 1j * np.random.uniform(-5, 5),
-        np.random.uniform(-5, 5)), np.random.uniform(-5, 5)) for _ in range(5)
-])
-def test_quadratic_fermionic_simulation_gate_unitary(
-        weights, exponent):
-    generator = np.zeros((4, 4), dtype=np.complex128)
-    # w0 |10><01| + h.c.
-    generator[2, 1] = weights[0]
-    generator[1, 2] = weights[0].conjugate()
-    # w1 |11><11|
-    generator[3, 3] = weights[1]
-    expected_unitary = la.expm(-1j * exponent * generator)
-
-    gate  = ofc.QuadraticFermionicSimulationGate(weights, exponent=exponent)
-    actual_unitary = cirq.unitary(gate)
-
-    assert np.allclose(expected_unitary, actual_unitary)
-
-    symbolic_gate = (
-            ofc.QuadraticFermionicSimulationGate(
-                (sympy.Symbol('w0'), sympy.Symbol('w1')),
-                exponent=sympy.Symbol('t')))
-    qubits = cirq.LineQubit.range(2)
+    weights = tuple(sympy.Symbol(f'w{i}') for i in range(gate.num_weights))
+    exponent = sympy.Symbol('t')
+    symbolic_gate = type(gate)(weights, exponent=exponent)
+    qubits = cirq.LineQubit.range(gate.num_qubits())
     circuit = cirq.Circuit.from_ops(symbolic_gate._decompose_(qubits))
-    resolver = {'w0': weights[0], 'w1': weights[1], 't': exponent}
+    resolver = {'t': gate.exponent}
+    for i, w in enumerate(gate.weights):
+        resolver[f'w{i}'] = w
     resolved_circuit = cirq.resolve_parameters(circuit, resolver)
     decomp_unitary = resolved_circuit.to_unitary_matrix(qubit_order=qubits)
 
     assert np.allclose(expected_unitary, decomp_unitary)
 
-    cirq.testing.assert_decompose_is_consistent_with_unitary(gate)
+def assert_fswap_consistent(gate):
+    n_qubits = gate.num_qubits()
+    for i in range(n_qubits - 1):
+        fswap = cirq.kron(np.eye(1 << i), cirq.unitary(ofc.FSWAP),
+                np.eye(1 << (n_qubits - i - 2)))
+        assert fswap.shape == (1 << n_qubits,) * 2
+        generator = gate.generator
+        fswapped_generator = np.linalg.multi_dot([fswap, generator, fswap])
+        gate.fswap(i)
+        assert np.allclose(gate.generator, fswapped_generator)
 
 
-def test_cubic_fermionic_simulation_gate():
-    ofc.testing.assert_eigengate_implements_consistent_protocols(
-        ofc.CubicFermionicSimulationGate)
+def assert_permute_consistent(gate):
+    n_qubits = gate.num_qubits()
+    qubits = cirq.LineQubit.range(n_qubits)
+    for pos in itertools.permutations(range(n_qubits)):
+        permuted_gate = gate.__copy__()
+        gate.permute(pos)
+        actual_unitary = cirq.unitary(permuted_gate)
+
+        ops = [
+            cca.LinearPermutationGate(n_qubits,
+                dict(zip(range(n_qubits), pos)), ofc.FSWAP)(*qubits),
+            gate(*qubits),
+            cca.LinearPermutationGate(n_qubits,
+                dict(zip(pos, range(n_qubits))), ofc.FSWAP)(*qubits)
+            ]
+        circuit = cirq.Circuit.from_ops(ops)
+        expected_unitary = cirq.unitary(circuit)
+        assert np.allclose(actual_unitary, expected_unitary)
+
+
+random_quadratic_gates = [
+        random_fermionic_simulation_gate(2) for _ in range(5)]
+manual_quadratic_gates = [ofc.QuadraticFermionicSimulationGate(weights)
+        for weights in
+        [cast(Tuple[float, float], (1, 1)), (1, 0), (0, 1), (0, 0)]]
+quadratic_gates = random_quadratic_gates + manual_quadratic_gates
+cubic_gates = ([ofc.CubicFermionicSimulationGate()] +
+    [random_fermionic_simulation_gate(3) for _ in range(5)])
+quartic_gates = ([ofc.QuarticFermionicSimulationGate()] +
+        [random_fermionic_simulation_gate(4) for _ in range(5)])
+gates = quadratic_gates + cubic_gates + quartic_gates
+
+@pytest.mark.parametrize('gate', gates)
+def test_fermionic_simulation_gate(gate):
+    ofc.testing.assert_implements_consistent_protocols(gate)
+
+    generator = gate.generator
+    expected_unitary = la.expm(-1j * gate.exponent * generator)
+    actual_unitary = cirq.unitary(gate)
+    assert np.allclose(expected_unitary, actual_unitary)
+
+    assert_fswap_consistent(gate)
+    assert_permute_consistent(gate)
+
+
+@pytest.mark.parametrize('weights', np.random.rand(10, 3))
+def test_weights_and_exponent(weights):
+    exponents = np.linspace(-1, 1, 8)
+    gates = tuple(
+        ofc.QuarticFermionicSimulationGate(weights / exponent,
+                                         exponent=exponent,
+                                         absorb_exponent=True)
+        for exponent in exponents)
+
+    for g1, g2 in itertools.combinations(gates, 2):
+        assert cirq.approx_eq(g1, g2, atol=1e-100)
+
+    for i, (gate, exponent) in enumerate(zip(gates, exponents)):
+        assert gate.exponent == 1
+        new_exponent = exponents[-i]
+        new_gate = gate._with_exponent(new_exponent)
+        assert new_gate.exponent == new_exponent
+
+
+@pytest.mark.parametrize('gate', random_quadratic_gates)
+def test_quadratic_fermionic_simulation_gate_symbolic_decompose(gate):
+    assert_symbolic_decomposition_consistent(gate)
 
 
 def test_cubic_fermionic_simulation_gate_equality():
@@ -145,53 +209,6 @@ def test_cubic_fermionic_simulation_gate_consistency_special(exponent, control):
 
     assert np.allclose(general_unitary, special_unitary)
 
-
-@pytest.mark.parametrize('weights,exponent', [
-    (np.random.uniform(-5, 5, 3) + 1j * np.random.uniform(-5, 5, 3),
-        np.random.uniform(-5, 5)) for _ in range(5)
-])
-def test_cubic_fermionic_simulation_gate_consistency_docstring(
-        weights, exponent):
-    generator = np.zeros((8, 8), dtype=np.complex128)
-    # w0 |110><101| + h.c.
-    generator[6, 5] = weights[0]
-    generator[5, 6] = weights[0].conjugate()
-    # w1 |110><011| + h.c.
-    generator[6, 3] = weights[1]
-    generator[3, 6] = weights[1].conjugate()
-    # w2 |101><011| + h.c.
-    generator[5, 3] = weights[2]
-    generator[3, 5] = weights[2].conjugate()
-    expected_unitary = la.expm(-1j * exponent * generator)
-
-    gate  = ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
-    actual_unitary = cirq.unitary(gate)
-
-    assert np.allclose(expected_unitary, actual_unitary)
-
-
-def test_quartic_fermionic_simulation_consistency():
-    ofc.testing.assert_implements_consistent_protocols(
-        ofc.QuarticFermionicSimulationGate())
-
-
-@pytest.mark.parametrize('weights', np.random.rand(10, 3))
-def test_weights_and_exponent(weights):
-    exponents = np.linspace(-1, 1, 8)
-    gates = tuple(
-        ofc.QuarticFermionicSimulationGate(weights / exponent,
-                                         exponent=exponent)
-        for exponent in exponents)
-
-    for g1 in gates:
-        for g2 in gates:
-            assert cirq.approx_eq(g1, g2, atol=1e-100)
-
-    for i, (gate, exponent) in enumerate(zip(gates, exponents)):
-        assert gate.exponent == 1
-        new_exponent = exponents[-i]
-        new_gate = gate._with_exponent(new_exponent)
-        assert new_gate.exponent == new_exponent
 
 quartic_fermionic_simulation_simulator_test_cases = [
         (ofc.QuarticFermionicSimulationGate((0, 0, 0)), 1.,
@@ -261,12 +278,6 @@ def test_quartic_fermionic_simulation_on_simulator(
         result, correct_state, atol=atol)
 
 
-def test_quartic_fermionic_simulation_init_with_multiple_args_fails():
-    with pytest.raises(ValueError):
-        _ = ofc.QuarticFermionicSimulationGate(
-                (1,1,1), exponent=1.0, duration=np.pi/2)
-
-
 def test_quartic_fermionic_simulation_eq():
     eq = cirq.testing.EqualsTester()
 
@@ -275,18 +286,7 @@ def test_quartic_fermionic_simulation_eq():
             ofc.QuarticFermionicSimulationGate((0.3, 0.1, -0.1), exponent=2),
             ofc.QuarticFermionicSimulationGate((-0.6, -0.2, 0.2), exponent=-1),
             ofc.QuarticFermionicSimulationGate((0.6, 0.2, 2 * np.pi - 0.2)),
-            ofc.QuarticFermionicSimulationGate(
-                (1.2, 0.4, -0.4), rads=0.5 * np.pi),
-            ofc.QuarticFermionicSimulationGate((1.2, 0.4, -0.4), degs=90),
-            ofc.QuarticFermionicSimulationGate(
-                (1.2, 0.4, -0.4), duration=0.5 * np.pi / 2)
             )
-
-    eq.add_equality_group(
-            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3), exponent=0.5),
-            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3),
-                                             rads=0.5 * np.pi),
-            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3), degs=90))
 
     eq.make_equality_group(
             lambda: ofc.QuarticFermionicSimulationGate(
@@ -333,49 +333,3 @@ def test_quartic_fermionic_simulation_gate_text_diagram():
 5: ------------a*a*aa---
     """.strip()
     assert actual_text_diagram == expected_text_diagram
-
-
-test_weights = [1.0, 0.5, 0.25, 0.1, 0.0, -0.5]
-@pytest.mark.parametrize('weights', itertools.chain(
-        itertools.product(test_weights, repeat=3),
-        np.random.rand(10, 3)
-        ))
-def test_quartic_fermionic_simulation_decompose(weights):
-    cirq.testing.assert_decompose_is_consistent_with_unitary(
-        ofc.QuarticFermionicSimulationGate(weights))
-
-
-@pytest.mark.parametrize('weights,exponent', [
-    (np.random.uniform(-5, 5, 3) + 1j * np.random.uniform(-5, 5, 3),
-        np.random.uniform(-5, 5)) for _ in range(5)
-])
-def test_quartic_fermionic_simulation_unitary(
-        weights, exponent):
-    generator = np.zeros((1 << 4,) * 2, dtype=np.complex128)
-
-    # w0 |1001><0110| + h.c.
-    generator[9, 6] = weights[0]
-    generator[6, 9] = weights[0].conjugate()
-    # w1 |1010><0101| + h.c.
-    generator[10, 5] = weights[1]
-    generator[5, 10] = weights[1].conjugate()
-    # w2 |1100><0011| + h.c.
-    generator[12, 3] = weights[2]
-    generator[3, 12] = weights[2].conjugate()
-    expected_unitary = la.expm(-1j * exponent * generator)
-
-    gate  = ofc.QuarticFermionicSimulationGate(weights, exponent=exponent)
-    actual_unitary = cirq.unitary(gate)
-
-    assert np.allclose(expected_unitary, actual_unitary)
-
-    cirq.testing.assert_decompose_is_consistent_with_unitary(gate)
-
-
-@pytest.mark.parametrize('weights,exponent', [
-    (np.random.uniform(-5, 5, 3) + 1j * np.random.uniform(-5, 5, 3),
-        np.random.uniform(-5, 5)) for _ in range(5)
-])
-def test_quartic_fermionic_simulation_apply_unitary(weights, exponent):
-    gate = ofc.QuarticFermionicSimulationGate(weights, exponent=exponent)
-    cirq.testing.assert_has_consistent_apply_unitary(gate, atol=5e-6)
