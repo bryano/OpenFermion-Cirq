@@ -54,11 +54,14 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
         expected_component[i, j] = expected_component[j, i] = sign * 0.5
         assert np.allclose(actual_component, expected_component)
 
+
 def random_real(size=None, mag=20):
     return np.random.uniform(-mag, mag, size)
 
+
 def random_complex(size=None, mag=20):
     return random_real(size, mag) + 1j * random_real(size, mag)
+
 
 def random_fermionic_simulation_gate(order):
     exponent = random_real()
@@ -70,6 +73,7 @@ def random_fermionic_simulation_gate(order):
         return ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
     if order == 4:
         return ofc.QuarticFermionicSimulationGate(weights, exponent=exponent)
+
 
 def assert_symbolic_decomposition_consistent(gate):
     expected_unitary = cirq.unitary(gate)
@@ -86,6 +90,7 @@ def assert_symbolic_decomposition_consistent(gate):
     decomp_unitary = resolved_circuit.to_unitary_matrix(qubit_order=qubits)
 
     assert np.allclose(expected_unitary, decomp_unitary)
+
 
 def assert_fswap_consistent(gate):
     n_qubits = gate.num_qubits()
@@ -118,6 +123,11 @@ def assert_permute_consistent(gate):
         expected_unitary = cirq.unitary(circuit)
         assert np.allclose(actual_unitary, expected_unitary)
 
+    with pytest.raises(ValueError):
+        gate.permute(range(1, n_qubits))
+    with pytest.raises(ValueError):
+        gate.permute([1] * n_qubits)
+
 
 random_quadratic_gates = [
         random_fermionic_simulation_gate(2) for _ in range(5)]
@@ -130,6 +140,7 @@ cubic_gates = ([ofc.CubicFermionicSimulationGate()] +
 quartic_gates = ([ofc.QuarticFermionicSimulationGate()] +
         [random_fermionic_simulation_gate(4) for _ in range(5)])
 gates = quadratic_gates + cubic_gates + quartic_gates
+
 
 @pytest.mark.parametrize('gate', gates)
 def test_fermionic_simulation_gate(gate):
@@ -144,7 +155,7 @@ def test_fermionic_simulation_gate(gate):
     assert_permute_consistent(gate)
 
 
-@pytest.mark.parametrize('weights', np.random.rand(10, 3))
+@pytest.mark.parametrize('weights', list(np.random.rand(10, 3)) + [(1, 0, 1)])
 def test_weights_and_exponent(weights):
     exponents = np.linspace(-1, 1, 8)
     gates = tuple(
@@ -302,34 +313,106 @@ def test_quartic_fermionic_simulation_gate_text_diagram():
     circuit = cirq.Circuit.from_ops(
             [gate(*qubits[:4]), gate(*qubits[-4:])])
 
-    actual_text_diagram = circuit.to_text_diagram()
     expected_text_diagram = """
-0: ───⇊⇈────────
+0: ───⇊⇈(1, 1, 1)─────────────────
       │
-1: ───⇊⇈────────
+1: ───⇊⇈──────────────────────────
       │
-2: ───⇊⇈───⇊⇈───
-      │    │
-3: ───⇊⇈───⇊⇈───
-           │
-4: ────────⇊⇈───
-           │
-5: ────────⇊⇈───
-    """.strip()
-    assert actual_text_diagram == expected_text_diagram
+2: ───⇊⇈────────────⇊⇈(1, 1, 1)───
+      │             │
+3: ───⇊⇈────────────⇊⇈────────────
+                    │
+4: ─────────────────⇊⇈────────────
+                    │
+5: ─────────────────⇊⇈────────────
+""".strip()
+    cirq.testing.assert_has_diagram(circuit, expected_text_diagram)
 
-    actual_text_diagram = circuit.to_text_diagram(use_unicode_characters=False)
     expected_text_diagram = """
-0: ---a*a*aa------------
+0: ---a*a*aa(1, 1, 1)---------------------
       |
-1: ---a*a*aa------------
+1: ---a*a*aa------------------------------
       |
-2: ---a*a*aa---a*a*aa---
-      |        |
-3: ---a*a*aa---a*a*aa---
-               |
-4: ------------a*a*aa---
-               |
-5: ------------a*a*aa---
-    """.strip()
-    assert actual_text_diagram == expected_text_diagram
+2: ---a*a*aa------------a*a*aa(1, 1, 1)---
+      |                 |
+3: ---a*a*aa------------a*a*aa------------
+                        |
+4: ---------------------a*a*aa------------
+                        |
+5: ---------------------a*a*aa------------
+""".strip()
+    cirq.testing.assert_has_diagram(circuit,
+            expected_text_diagram, use_unicode_characters=False)
+
+
+def test_quadratic_fermionic_simulation_gate_text_diagram():
+    gate = ofc.QuadraticFermionicSimulationGate((1, 1))
+    a, b, c = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit.from_ops([gate(a, b), gate(b, c)])
+
+    expected_text_diagram = """
+0: ───↓↑(1, 1)──────────────
+      │
+1: ───↓↑─────────↓↑(1, 1)───
+                 │
+2: ──────────────↓↑─────────
+""".strip()
+    cirq.testing.assert_has_diagram(circuit, expected_text_diagram)
+
+    expected_text_diagram = """
+0: ---a*a(1, 1)---------------
+      |
+1: ---a*a---------a*a(1, 1)---
+                  |
+2: ---------------a*a---------
+""".strip()
+    cirq.testing.assert_has_diagram(circuit, expected_text_diagram,
+            use_unicode_characters=False)
+
+
+def test_cubic_fermionic_simulation_gate_text_diagram():
+    gate = ofc.CubicFermionicSimulationGate((1, 1, 1))
+    qubits = cirq.LineQubit.range(5)
+    circuit = cirq.Circuit.from_ops(
+            [gate(*qubits[:3]), gate(*qubits[2:5])])
+
+    expected_text_diagram = """
+0: ───↕↓↑(1, 1, 1)──────────────────
+      │
+1: ───↕↓↑───────────────────────────
+      │
+2: ───↕↓↑────────────↕↓↑(1, 1, 1)───
+                     │
+3: ──────────────────↕↓↑────────────
+                     │
+4: ──────────────────↕↓↑────────────
+""".strip()
+    cirq.testing.assert_has_diagram(circuit, expected_text_diagram)
+
+    expected_text_diagram = """
+0: ---na*a(1, 1, 1)-------------------
+      |
+1: ---na*a----------------------------
+      |
+2: ---na*a------------na*a(1, 1, 1)---
+                      |
+3: -------------------na*a------------
+                      |
+4: -------------------na*a------------
+""".strip()
+    cirq.testing.assert_has_diagram(circuit, expected_text_diagram,
+            use_unicode_characters=False)
+
+@pytest.mark.parametrize('gate', gates)
+def test_fermionic_simulation_gate_resolve_parameters(gate):
+    weight_names = [f'w{i}' for i in range(gate.num_weights)]
+    weight_params = [sympy.Symbol(w) for w in weight_names]
+    resolver = dict(zip(weight_names, gate.weights))
+    resolver['s'] = gate._global_shift
+    resolver['e'] = gate._exponent
+    symbolic_gate = type(gate)(weight_params,
+            exponent=sympy.Symbol('e'), global_shift=sympy.Symbol('s'))
+    resolved_gate = cirq.resolve_parameters(symbolic_gate, resolver) 
+    assert resolved_gate == gate
+
+

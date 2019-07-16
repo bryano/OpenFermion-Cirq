@@ -25,3 +25,6 @@ from openfermioncirq.testing.wrapped import (
     assert_implements_consistent_protocols,
     assert_eigengate_implements_consistent_protocols,
 )
+
+from openfermioncirq.testing.random import (
+    random_interaction_operator_term)

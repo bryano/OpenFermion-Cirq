@@ -175,7 +175,7 @@ class FermionicSimulationGate(cirq.EigenGate):
     @classmethod
     @abc.abstractmethod
     def wire_symbol(cls, use_unicode: bool):
-        pass
+        """The symbol to use in circuit diagrams."""
 
     @classmethod
     @abc.abstractmethod
@@ -247,7 +247,7 @@ class FermionicSimulationGate(cirq.EigenGate):
                                ) -> cirq.CircuitDiagramInfo:
         wire_symbols = [self.wire_symbol(args.use_unicode_characters)
                 ] * self.num_qubits()
-        wire_symbols[0] += f'({self.weights})'
+        wire_symbols[0] += f'{tuple(self.weights)}'
         return cirq.CircuitDiagramInfo(wire_symbols=wire_symbols,
                                        exponent=self._diagram_exponent(args))
 
