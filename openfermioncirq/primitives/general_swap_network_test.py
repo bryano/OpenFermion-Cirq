@@ -65,14 +65,15 @@ def test_trotterize(order, hamiltonian):
     initial_mapping = dict(zip(qubits, range(hamiltonian.n_qubits)))
     swap_network = cca.complete_acquaintance_strategy(
             qubits, order, ofc.FSWAP)
+    assert cca.uses_consistent_swap_gate(swap_network, ofc.FSWAP)
     cca.remove_redundant_acquaintance_opportunities(swap_network)
     cca.return_to_initial_mapping(swap_network, ofc.FSWAP)
-    cca.compress_permutations(swap_network, ofc.FSWAP)
 
     circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
 
     actual_unitary = circuit.to_unitary_matrix(qubit_order=qubits)
-    acquaintance_dag = cca.get_acquaintance_dag(swap_network, initial_mapping)
+    acquaintance_dag = cca.inspection_utils.get_acquaintance_dag(
+            swap_network, initial_mapping)
     expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
 
     assert np.allclose(actual_unitary, expected_unitary)
