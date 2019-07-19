@@ -5,4 +5,4 @@ sympy
 
 # NOTE: switch to non-dev versions when releasing!
 https://github.com/bryano/Cirq/archive/swap-option-and-resolver.zip
-openfermion==0.10.0.dev20190416194415
+https://github.com/quantumlib/OpenFermion/archive/master.zip
