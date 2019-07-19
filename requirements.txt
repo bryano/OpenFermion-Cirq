@@ -4,5 +4,5 @@ scipy
 sympy
 
 # NOTE: switch to non-dev versions when releasing!
-cirq==0.5.0.dev20190416130350
+https://github.com/bryano/Cirq/archive/swap-option-and-resolver.zip
 openfermion==0.10.0.dev20190416194415
