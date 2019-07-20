@@ -4,5 +4,5 @@ scipy
 sympy
 
 # NOTE: switch to non-dev versions when releasing!
-https://github.com/bryano/Cirq/archive/swap-option-and-resolver.zip
+https://github.com/bryano/Cirq/archive/swap-option.zip
 https://github.com/quantumlib/OpenFermion/archive/master.zip
