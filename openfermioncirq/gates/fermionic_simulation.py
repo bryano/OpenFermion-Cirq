@@ -170,7 +170,12 @@ class FermionicSimulationGate(cirq.EigenGate):
 
     @abc.abstractproperty
     def generator(self):
-        """TODO"""
+        """The matrix G such that the gate's unitary is exp(-i t G) with exponent t."""
+
+    @abc.abstractproperty
+    def fswap(self, i: int = 0):
+        """Updates the weights of the gate as if it were sandwiched by an FSWAP
+        on the i-th and (i+1)th qubits."""
 
     @classmethod
     @abc.abstractmethod
@@ -223,6 +228,7 @@ class FermionicSimulationGate(cirq.EigenGate):
         self._exponent = 1
 
     def permute(self, init_pos: Sequence[int]):
+        """An in-place version of permuted."""
         I = range(self.num_qubits())
         if sorted(init_pos) != list(I):
             raise ValueError(f'{init_pos} is not a permutation of {I}.')
@@ -235,6 +241,15 @@ class FermionicSimulationGate(cirq.EigenGate):
         assert curr_pos == list(I)
 
     def permuted(self, init_pos: Sequence[int]):
+        """Returns a gate with the Jordan-Wigner ordering changed.
+
+        If the Jordan-Wigner ordering of the original gate is given by
+        init_pos, then the returned gate has Jordan-Wigner ordering 
+        (0, ..., n - 1), where n is the number of qubits on which the gate acts.
+
+        Args:
+            init_pos: A permutation of (0, ..., n - 1).
+        """
         gate = self.__copy__()
         gate.permute(init_pos)
         return gate

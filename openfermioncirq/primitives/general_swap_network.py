@@ -58,6 +58,23 @@ def trotter_circuit(
         execution_strategy: cca.executor.ExecutionStrategy =
             GreedyExecutionStrategy,
         ) -> cirq.Circuit:
+    """Uses a swap network to construct a circuit that approximates exp(i H)
+    for the specified H.
+
+    Specifically, for each (unordered) set of modes $I = \{i_1, \ldots, i_k\}$,
+    there is at most one gate $\exp(i H_I)$ corresponding to the term  $H_I$ in
+    the Hamiltonian that involves exactly those modes.
+
+    Args:
+        swap_network: The circuit containing permutation gates and acquaintance
+            opportunity gates.
+        initial_mapping: The initial mapping from physical qubits to logical
+            qubits.
+        hamiltonian: The Hamiltonian to Trotterize.
+        execution_strategy: The strategy used to replace acquaintance
+            opportunity gates with concrete ones. Defaults to greedy, i.e., all
+            gates are inserted at the first opportunity.
+    """
     assert openfermion.is_hermitian(hamiltonian)
     gates = ofc_gates.fermionic_simulation_gates_from_interaction_operator(
             hamiltonian)
@@ -70,6 +87,23 @@ def trotter_unitary(
         acquaintance_dag: cirq.CircuitDag,
         hamiltonian: openfermion.InteractionOperator,
         ) -> np.ndarray:
+    """Returns the unitary corresponding to the Trotterization of the given
+    Hamiltonian according to the Trotter order specified by an acquaintance
+    DAG.
+
+    Each term is applied in full at every opportunity.
+
+    Note that there may be be distinct unitaries consistent with the DAG if it
+    does not specify a precedence relationship between some pair of
+    non-commuting terms. No guarantee is made as to which one this method
+    returns.
+
+    Args:
+        acquaintance_dag: A CircuitDag whose operations are
+            AcquaintanceOperations. The indices of each AcquaintanceOperation
+            indicate the part of the Hamiltonian to apply at that point.
+        hamiltonian: The operator to Trotterize.
+    """
     assert openfermion.is_hermitian(hamiltonian)
     unitary = np.eye(1 << hamiltonian.n_qubits)
     for acquaintance_op in acquaintance_dag.all_operations():

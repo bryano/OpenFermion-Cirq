@@ -412,7 +412,7 @@ def test_fermionic_simulation_gate_resolve_parameters(gate):
     resolver['e'] = gate._exponent
     symbolic_gate = type(gate)(weight_params,
             exponent=sympy.Symbol('e'), global_shift=sympy.Symbol('s'))
-    resolved_gate = cirq.resolve_parameters(symbolic_gate, resolver) 
+    resolved_gate = cirq.resolve_parameters(symbolic_gate, resolver)
     assert resolved_gate == gate
 
 
