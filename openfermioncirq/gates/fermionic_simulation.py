@@ -12,7 +12,7 @@
 
 import abc
 import itertools
-from typing import cast, Dict, Optional, Sequence, Tuple, Union
+from typing import cast, Dict, Optional, overload, Sequence, Tuple, Union
 
 import cirq
 import numpy as np
@@ -173,8 +173,8 @@ class FermionicSimulationGate(cirq.EigenGate):
         """The matrix G such that the gate's unitary is exp(-i t G) with
         exponent t."""
 
-    @abc.abstractproperty
-    def fswap(self, i: int = 0):
+    @abc.abstractmethod
+    def fswap(self, i: int):
         """Updates the weights of the gate as if it were sandwiched by an FSWAP
         on the i-th and (i+1)th qubits."""
 
@@ -379,6 +379,8 @@ class QuadraticFermionicSimulationGate(
         operator.two_body_tensor[tuple(modes) * 2] += weights[1]
 
     def fswap(self, i: int = 0):
+        if i != 0:
+            return
         self.weights = (self.weights[0].conjugate(), self.weights[1])
 
 
