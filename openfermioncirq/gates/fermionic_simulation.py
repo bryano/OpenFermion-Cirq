@@ -12,7 +12,7 @@
 
 import abc
 import itertools
-from typing import cast, Dict, Optional, overload, Sequence, Tuple, Union
+from typing import cast, Dict, Optional, Sequence, Tuple, Union
 
 import cirq
 import numpy as np
@@ -380,7 +380,7 @@ class QuadraticFermionicSimulationGate(
 
     def fswap(self, i: int = 0):
         if i != 0:
-            return
+            raise ValueError(f'{i} != 0')
         self.weights = (self.weights[0].conjugate(), self.weights[1])
 
 
@@ -512,6 +512,9 @@ class CubicFermionicSimulationGate(
         elif i == 1:
             self.weights = (self.weights[0].conjugate(), -self.weights[2],
                     -self.weights[1])
+        else:
+            raise ValueError(f'{i} not in (0, 1)')
+
 
 @cirq.value_equality(approximate=True)
 class QuarticFermionicSimulationGate(FermionicSimulationGate):
@@ -776,3 +779,5 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
             self.weights = (-self.weights[0], self.weights[2], self.weights[1])
         elif i == 2:
             self.weights = (self.weights[1], self.weights[0], -self.weights[2])
+        else:
+            raise ValueError(f'{i} not in (0, 1, 2)')

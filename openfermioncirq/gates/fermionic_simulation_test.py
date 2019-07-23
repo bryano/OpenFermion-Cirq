@@ -102,6 +102,9 @@ def assert_fswap_consistent(gate):
         fswapped_generator = np.linalg.multi_dot([fswap, generator, fswap])
         gate.fswap(i)
         assert np.allclose(gate.generator, fswapped_generator)
+    for i in (-1, n_qubits):
+        with pytest.raises(ValueError):
+            gate.fswap(i)
 
 
 def assert_permute_consistent(gate):
