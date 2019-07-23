@@ -170,7 +170,8 @@ class FermionicSimulationGate(cirq.EigenGate):
 
     @abc.abstractproperty
     def generator(self):
-        """The matrix G such that the gate's unitary is exp(-i t G) with exponent t."""
+        """The matrix G such that the gate's unitary is exp(-i t G) with
+        exponent t."""
 
     @abc.abstractproperty
     def fswap(self, i: int = 0):
@@ -244,7 +245,7 @@ class FermionicSimulationGate(cirq.EigenGate):
         """Returns a gate with the Jordan-Wigner ordering changed.
 
         If the Jordan-Wigner ordering of the original gate is given by
-        init_pos, then the returned gate has Jordan-Wigner ordering 
+        init_pos, then the returned gate has Jordan-Wigner ordering
         (0, ..., n - 1), where n is the number of qubits on which the gate acts.
 
         Args:
