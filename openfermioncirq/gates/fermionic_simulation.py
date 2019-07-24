@@ -143,6 +143,8 @@ def interaction_operator_from_fermionic_simulation_gates(
 
 
 class FermionicSimulationGate(cirq.EigenGate):
+    """The Jordan-Wigner transform of exp(-i H) for a fermionic Hamiltonian
+    H."""
 
     def __init__(self,
                  weights: Optional[Tuple[complex, ...]]=None,
