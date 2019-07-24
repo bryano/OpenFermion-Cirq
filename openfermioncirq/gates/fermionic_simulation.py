@@ -449,6 +449,10 @@ class CubicFermionicSimulationGate(
             components.append((exp_factor, proj))
         return components
 
+    def _value_equality_values_(self):
+        return tuple((w * self.exponent,)
+                for w in list(self.weights) + [self._global_shift])
+
     def __repr__(self):
         return (
             'ofc.CubicFermionicSimulationGate(' +
