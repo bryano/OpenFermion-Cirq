@@ -4,5 +4,5 @@ scipy
 sympy
 
 # NOTE: switch to non-dev versions when releasing!
-https://github.com/quantumlib/Cirq.git
+git://github.com/quantumlib/Cirq#egg=cirq
 openfermion==0.10.0
