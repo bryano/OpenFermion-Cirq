@@ -67,7 +67,9 @@ def trotter_circuit(
 
     Args:
         swap_network: The circuit containing permutation gates and acquaintance
-            opportunity gates.
+            opportunity gates. Permutation gates change the mapping between
+            physical and logical qubits; acquaintance opportunity gates
+            represent a place in the circuit that a logical gate can be placed.
         initial_mapping: The initial mapping from physical qubits to logical
             qubits.
         hamiltonian: The Hamiltonian to Trotterize.
