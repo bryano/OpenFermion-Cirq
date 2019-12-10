@@ -45,7 +45,7 @@ def swap_network(qubits: Sequence[cirq.Qid],
         from openfermioncirq import swap_network
 
         qubits = cirq.LineQubit.range(4)
-        circuit = cirq.Circuit.from_ops(swap_network(qubits))
+        circuit = cirq.Circuit(swap_network(qubits))
         print(circuit)
 
     Output:
@@ -64,7 +64,7 @@ def swap_network(qubits: Sequence[cirq.Qid],
 
     .. testcode::
 
-        circuit = cirq.Circuit.from_ops(swap_network(qubits, offset=True))
+        circuit = cirq.Circuit(swap_network(qubits, offset=True))
         print(circuit)
 
     Output:
@@ -83,28 +83,26 @@ def swap_network(qubits: Sequence[cirq.Qid],
 
     .. testcode::
 
-        from openfermioncirq import XXYY
-
-        circuit = cirq.Circuit.from_ops(
+        circuit = cirq.Circuit(
             swap_network(
                 qubits,
-                lambda p, q, a, b: XXYY(a, b) if abs(p - q) == 1
+                lambda p, q, a, b: cirq.ISWAP(a, b)**-1 if abs(p - q) == 1
                                    else cirq.CZ(a, b),
-                fermionic=True),
-            strategy=cirq.InsertStrategy.EARLIEST)
+                fermionic=True))
         print(circuit)
 
     Output:
 
     .. testoutput::
 
-        0: ───XXYY───×ᶠ────────────@───×ᶠ───────────────
-              │      │             │   │
-        1: ───XXYY───×ᶠ───@───×ᶠ───@───×ᶠ───XXYY───×ᶠ───
-                          │   │             │      │
-        2: ───XXYY───×ᶠ───@───×ᶠ───@───×ᶠ───XXYY───×ᶠ───
-              │      │             │   │
-        3: ───XXYY───×ᶠ────────────@───×ᶠ───────────────
+        0: ───iSwap──────×ᶠ────────────@───×ᶠ───────────────────
+              │          │             │   │
+        1: ───iSwap^-1───×ᶠ───@───×ᶠ───@───×ᶠ───iSwap──────×ᶠ───
+                              │   │             │          │
+        2: ───iSwap──────×ᶠ───@───×ᶠ───@───×ᶠ───iSwap^-1───×ᶠ───
+              │          │             │   │
+        3: ───iSwap^-1───×ᶠ────────────@───×ᶠ───────────────────
+
 
     Args:
         qubits: The qubits sorted so that the j-th qubit in the Sequence

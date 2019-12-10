@@ -87,7 +87,7 @@ def assert_symbolic_decomposition_consistent(gate):
     for i, w in enumerate(gate.weights):
         resolver[f'w{i}'] = w
     resolved_circuit = cirq.resolve_parameters(circuit, resolver)
-    decomp_unitary = resolved_circuit.to_unitary_matrix(qubit_order=qubits)
+    decomp_unitary = resolved_circuit.unitary(qubit_order=qubits)
 
     assert np.allclose(expected_unitary, decomp_unitary)
 
@@ -222,7 +222,7 @@ def test_cubic_fermionic_simulation_gate_consistency_special(exponent, control):
     indices = np.dot(
             list(itertools.product((0, 1), repeat=3)),
             (2 ** np.roll(np.arange(3), -control))[::-1])
-    special_gate = ofc.CXXYYPowGate(exponent=exponent)
+    special_gate = cirq.ControlledGate(cirq.ISWAP**-exponent)
     special_unitary = (
             cirq.unitary(special_gate)[indices[:, np.newaxis], indices])
 
@@ -291,8 +291,8 @@ def test_quartic_fermionic_simulation_on_simulator(
         gate, exponent, initial_state, correct_state, atol):
 
     a, b, c, d = cirq.LineQubit.range(4)
-    circuit = cirq.Circuit.from_ops(gate(a, b, c, d)**exponent)
-    result = circuit.apply_unitary_effect_to_state(initial_state)
+    circuit = cirq.Circuit(gate(a, b, c, d)**exponent)
+    result = circuit.final_wavefunction(initial_state)
     cirq.testing.assert_allclose_up_to_global_phase(
         result, correct_state, atol=atol)
 
@@ -318,8 +318,7 @@ def test_quartic_fermionic_simulation_eq():
 def test_quartic_fermionic_simulation_gate_text_diagram():
     gate = ofc.QuarticFermionicSimulationGate((1,1,1))
     qubits = cirq.LineQubit.range(6)
-    circuit = cirq.Circuit.from_ops(
-            [gate(*qubits[:4]), gate(*qubits[-4:])])
+    circuit = cirq.Circuit([gate(*qubits[:4]), gate(*qubits[-4:])])
 
     expected_text_diagram = """
 0: ───⇊⇈(1, 1, 1)─────────────────

@@ -60,8 +60,7 @@ def test_fswap_matrix():
                                                [0, 0, 0, 1j]]))
 
     cirq.testing.assert_has_consistent_apply_unitary_for_various_exponents(
-        val=ofc.FSWAP,
-        exponents=[1, -0.5, 0.5, 0.25, -0.25, 0.1, sympy.Symbol('s')])
+        val=ofc.FSWAP, exponents=[1])
 
 
 def test_xxyy_init():
@@ -140,6 +139,13 @@ def test_xxyy_matrix():
                                   expm(-1j * np.pi * 0.25 * (XX + YY) / 4))
 
 
+@pytest.mark.parametrize('exponent', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
+def test_compare_xxyy_to_cirq_equivalent(exponent):
+    old_gate = ofc.XXYYPowGate(exponent=exponent)
+    new_gate = cirq.ISwapPowGate(exponent=-exponent)
+    np.testing.assert_allclose(cirq.unitary(old_gate), cirq.unitary(new_gate))
+
+
 def test_yxxy_init():
     assert ofc.YXXYPowGate(exponent=0.5).exponent == 0.5
     assert ofc.YXXYPowGate(exponent=1.5).exponent == 1.5
@@ -212,6 +218,21 @@ def test_yxxy_matrix():
                                   expm(-1j * np.pi * 0.25 * (YX - XY) / 4))
 
 
+@pytest.mark.parametrize('exponent', [1.0, 0.5, 0.25, 0.1, 0.0, -0.5])
+def test_compare_yxxy_to_cirq_equivalent(exponent):
+    old_gate = ofc.YXXYPowGate(exponent=exponent)
+    new_gate = cirq.PhasedISwapPowGate(exponent=exponent)
+    np.testing.assert_allclose(cirq.unitary(old_gate), cirq.unitary(new_gate))
+
+
+@pytest.mark.parametrize('rads', [
+    2*np.pi, np.pi, 0.5*np.pi, 0.25*np.pi, 0.1*np.pi, 0.0, -0.5*np.pi])
+def test_compare_ryxxy_to_cirq_equivalent(rads):
+    old_gate = ofc.Ryxxy(rads=rads)
+    new_gate = cirq.GivensRotation(angle_rads=rads)
+    np.testing.assert_allclose(cirq.unitary(old_gate), cirq.unitary(new_gate))
+
+
 @pytest.mark.parametrize(
         'gate, exponent, initial_state, correct_state, atol', [
             (ofc.XXYY, 1.0, np.array([0, 1, 1, 0]) / np.sqrt(2),
@@ -235,8 +256,8 @@ def test_yxxy_matrix():
 def test_two_qubit_rotation_gates_on_simulator(
         gate, exponent, initial_state, correct_state, atol):
     a, b = cirq.LineQubit.range(2)
-    circuit = cirq.Circuit.from_ops(gate(a, b)**exponent)
-    result = circuit.apply_unitary_effect_to_state(initial_state)
+    circuit = cirq.Circuit(gate(a, b)**exponent)
+    result = circuit.final_wavefunction(initial_state)
     cirq.testing.assert_allclose_up_to_global_phase(
         result, correct_state, atol=atol)
 
@@ -277,7 +298,7 @@ def test_common_gate_text_diagrams():
     a = cirq.NamedQubit('a')
     b = cirq.NamedQubit('b')
 
-    circuit = cirq.Circuit.from_ops(
+    circuit = cirq.Circuit(
         ofc.FSWAP(a, b),
         ofc.FSWAP(a, b)**0.5,
         ofc.XXYY(a, b),
@@ -294,7 +315,7 @@ a: ---fswap---fswap-------XXYY---YXXY---
 b: ---fswap---fswap^0.5---XXYY---#2-----
 """, use_unicode_characters=False)
 
-    circuit = cirq.Circuit.from_ops(
+    circuit = cirq.Circuit(
         ofc.XXYY(a, b)**0.5,
         ofc.YXXY(a, b)**0.5)
     cirq.testing.assert_has_diagram(circuit, """

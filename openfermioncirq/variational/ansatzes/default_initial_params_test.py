@@ -84,7 +84,7 @@ def test_trotter_ansatzes_default_initial_params_iterations_1(
     else:
         occupied_orbitals = range(len(qubits)//2)
 
-    preparation_circuit = cirq.Circuit.from_ops(
+    preparation_circuit = cirq.Circuit(
             prepare_gaussian_state(
                 qubits,
                 openfermion.QuadraticHamiltonian(one_body),
@@ -96,7 +96,7 @@ def test_trotter_ansatzes_default_initial_params_iterations_1(
     circuit = cirq.resolve_parameters(
             preparation_circuit + ansatz.circuit,
             ansatz.param_resolver(ansatz.default_initial_params()))
-    result = circuit.apply_unitary_effect_to_state(
+    result = circuit.final_wavefunction(
             qubit_order=ansatz.qubit_permutation(qubits))
     obj_val = objective.value(result)
 
@@ -119,7 +119,7 @@ def test_trotter_ansatzes_default_initial_params_iterations_1(
                 one_body_tensor=hamiltonian.one_body_tensor,
                 two_body_tensor=0.5 * hamiltonian.two_body_tensor)
 
-    simulation_circuit = cirq.Circuit.from_ops(
+    simulation_circuit = cirq.Circuit(
             simulate_trotter(
                 qubits,
                 half_way_hamiltonian,
@@ -128,8 +128,8 @@ def test_trotter_ansatzes_default_initial_params_iterations_1(
                 order=order,
                 algorithm=trotter_algorithm)
     )
-    final_state = (preparation_circuit + simulation_circuit
-                  ).apply_unitary_effect_to_state()
+    final_state = (
+            preparation_circuit + simulation_circuit).final_wavefunction()
     correct_val = openfermion.expectation(
             objective._hamiltonian_linear_op, final_state).real
 
@@ -175,7 +175,7 @@ def test_trotter_ansatzes_default_initial_params_iterations_2(
     else:
         occupied_orbitals = range(len(qubits)//2)
 
-    preparation_circuit = cirq.Circuit.from_ops(
+    preparation_circuit = cirq.Circuit(
             prepare_gaussian_state(
                 qubits,
                 openfermion.QuadraticHamiltonian(one_body),
@@ -187,7 +187,7 @@ def test_trotter_ansatzes_default_initial_params_iterations_2(
     circuit = cirq.resolve_parameters(
             preparation_circuit + ansatz.circuit,
             ansatz.param_resolver(ansatz.default_initial_params()))
-    result = circuit.apply_unitary_effect_to_state(
+    result = circuit.final_wavefunction(
             qubit_order=ansatz.qubit_permutation(qubits))
     obj_val = objective.value(result)
 
@@ -217,7 +217,7 @@ def test_trotter_ansatzes_default_initial_params_iterations_2(
                 one_body_tensor=hamiltonian.one_body_tensor,
                 two_body_tensor=0.75 * hamiltonian.two_body_tensor)
 
-    simulation_circuit = cirq.Circuit.from_ops(
+    simulation_circuit = cirq.Circuit(
             simulate_trotter(
                 qubits,
                 quarter_way_hamiltonian,
@@ -233,8 +233,8 @@ def test_trotter_ansatzes_default_initial_params_iterations_2(
                 order=order,
                 algorithm=trotter_algorithm)
     )
-    final_state = (preparation_circuit + simulation_circuit
-                  ).apply_unitary_effect_to_state()
+    final_state = (
+            preparation_circuit + simulation_circuit).final_wavefunction()
     correct_val = openfermion.expectation(
             objective._hamiltonian_linear_op, final_state).real
 
