@@ -67,15 +67,38 @@ def trotter_circuit(
 
     Args:
         swap_network: The circuit containing permutation gates and acquaintance
-            opportunity gates. Permutation gates change the mapping between
-            physical and logical qubits; acquaintance opportunity gates
-            represent a place in the circuit that a logical gate can be placed.
-        initial_mapping: The initial mapping from physical qubits to logical
-            qubits.
+            opportunity gates.
+        initial_mapping: The initial mapping from physical qubits to fermionic
+            modes.
         hamiltonian: The Hamiltonian to Trotterize.
         execution_strategy: The strategy used to replace acquaintance
             opportunity gates with concrete ones. Defaults to greedy, i.e., all
             gates are inserted at the first opportunity.
+
+    When using the Jordan-Wigner transform, each 1- or 2-body term in the
+    Hamiltonian can be mapped to a non-local qubit operator.
+    To avoid this, we can dynamically update the mapping between physical
+    qubits and fermionic modes so that each time we apply a term in the
+    Hamiltonian, the corresponding fermionic modes are mapped to adjacent
+    physical qubits in the Jordan-Wigner string. The swap network is a circuit
+    containing permutation gates and acquaintance opportunity gates.
+    Permutation gates change the mapping between physical qubits and fermion
+    modes; acquaintance opportunity gates represent a place in the circuit that
+    a logical gate can be placed. 
+
+    For example, if `hamiltonian` is an `InteractionOperator`, then
+
+    >>>import cirq
+    >>>import cirq.contrib.acquaintance as cca
+    >>>import openfermioncirq as ofc
+
+    >>>qubits = cirq.LineQubit.range(hamiltonian.n_qubits)
+    >>>initial_mapping = dict(zip(qubits, range(hamiltonian.n_qubits)))
+    >>>swap_network = cca.complete_acquaintance_strategy(qubits, 4, ofc.FSWAP)
+    >>>circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
+
+    produces a circuit that implements a single Trotter step but whose gates
+    only act locally on a line of qubits.
     """
     assert openfermion.is_hermitian(hamiltonian)
     gates = ofc_gates.fermionic_simulation_gates_from_interaction_operator(
