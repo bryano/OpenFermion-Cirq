@@ -84,10 +84,11 @@ def trotter_circuit(
     containing permutation gates and acquaintance opportunity gates.
     Permutation gates change the mapping between physical qubits and fermion
     modes; acquaintance opportunity gates represent a place in the circuit that
-    a logical gate can be placed. 
+    a logical gate can be placed.
 
-    The utilities in `cirq.contrib.acquaintance` may be useful for constructing a swap network.
-    For example, if `hamiltonian` is an `InteractionOperator`, then
+    The utilities in `cirq.contrib.acquaintance` may be useful for constructing
+    a swap network. For example, if `hamiltonian` is an `InteractionOperator`,
+    then
 
     >>>import cirq
     >>>import cirq.contrib.acquaintance as cca
