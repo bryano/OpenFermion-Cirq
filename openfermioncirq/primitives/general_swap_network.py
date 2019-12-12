@@ -86,6 +86,7 @@ def trotter_circuit(
     modes; acquaintance opportunity gates represent a place in the circuit that
     a logical gate can be placed. 
 
+    The utilities in `cirq.contrib.acquaintance` may be useful for constructing a swap network.
     For example, if `hamiltonian` is an `InteractionOperator`, then
 
     >>>import cirq
@@ -98,7 +99,10 @@ def trotter_circuit(
     >>>circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
 
     produces a circuit that implements a single Trotter step but whose gates
-    only act locally on a line of qubits.
+    only act locally on a line of qubits. `cca.complete_acquaintance_strategy`
+    works for arbitrary Hamiltonians; however, for sparser Hamiltonians with
+    known structure, it is often possible to construct a much more efficient
+    swap network.
     """
     assert openfermion.is_hermitian(hamiltonian)
     gates = ofc_gates.fermionic_simulation_gates_from_interaction_operator(
