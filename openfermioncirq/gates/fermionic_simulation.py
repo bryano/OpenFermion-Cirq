@@ -20,8 +20,6 @@ import openfermion
 import scipy.linalg as la
 import sympy
 
-from openfermioncirq.gates.common_gates import XXYYPowGate
-
 
 def _arg(x):
     if x == 0:

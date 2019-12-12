@@ -71,7 +71,7 @@ def test_trotterize(order, hamiltonian):
 
     circuit = trotter_circuit(swap_network, initial_mapping, hamiltonian)
 
-    actual_unitary = circuit.to_unitary_matrix(qubit_order=qubits)
+    actual_unitary = circuit.unitary(qubit_order=qubits)
     acquaintance_dag = cca.inspection_utils.get_acquaintance_dag(
             swap_network, initial_mapping)
     expected_unitary = trotter_unitary(acquaintance_dag, hamiltonian)
