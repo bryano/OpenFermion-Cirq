@@ -14,10 +14,9 @@
 
 from typing import Optional, Tuple
 
-import numpy as np
-
-import deprecation
 import cirq
+import deprecation
+import numpy as np
 
 from openfermioncirq.gates import common_gates
 
