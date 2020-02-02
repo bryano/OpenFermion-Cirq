@@ -15,9 +15,9 @@
 from typing import Optional, Tuple
 
 import cirq
-import deprecation
 import numpy as np
 import sympy
+import deprecation
 
 
 class FSwapPowGate(cirq.EigenGate,
