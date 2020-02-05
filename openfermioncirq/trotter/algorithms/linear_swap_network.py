@@ -122,12 +122,12 @@ class ControlledSymmetricLinearSwapNetworkTrotterStep(TrotterStep):
         def one_and_two_body_interaction(p, q, a, b) -> cirq.OP_TREE:
             yield CRxxyy(
                     0.5 * self.hamiltonian.one_body[p, q].real * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
             yield CRyxxy(
                     0.5 * self.hamiltonian.one_body[p, q].imag * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
             yield rot111(-self.hamiltonian.two_body[p, q] * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
         yield swap_network(
                 qubits, one_and_two_body_interaction, fermionic=True)
         qubits = qubits[::-1]
@@ -144,13 +144,13 @@ class ControlledSymmetricLinearSwapNetworkTrotterStep(TrotterStep):
         def one_and_two_body_interaction_reverse_order(p, q, a, b
                 ) -> cirq.OP_TREE:
             yield rot111(-self.hamiltonian.two_body[p, q] * time).on(
-                cast(cirq. Qid, control_qubit), a, b)
+                cast(cirq.Qid, control_qubit), a, b)
             yield CRyxxy(
                     0.5 * self.hamiltonian.one_body[p, q].imag * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
             yield CRxxyy(
                     0.5 * self.hamiltonian.one_body[p, q].real * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
         yield swap_network(qubits, one_and_two_body_interaction_reverse_order,
                 fermionic=True, offset=True)
 
@@ -222,12 +222,12 @@ class ControlledAsymmetricLinearSwapNetworkTrotterStep(TrotterStep):
         def one_and_two_body_interaction(p, q, a, b) -> cirq.OP_TREE:
             yield CRxxyy(
                     self.hamiltonian.one_body[p, q].real * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
             yield CRyxxy(
                     self.hamiltonian.one_body[p, q].imag * time).on(
-                            cast(cirq. Qid, control_qubit), a, b)
+                            cast(cirq.Qid, control_qubit), a, b)
             yield rot111(-2 * self.hamiltonian.two_body[p, q] * time).on(
-                cast(cirq. Qid, control_qubit), a, b)
+                cast(cirq.Qid, control_qubit), a, b)
         yield swap_network(qubits, one_and_two_body_interaction, fermionic=True)
         qubits = qubits[::-1]
 
