@@ -28,7 +28,7 @@ def random_interaction_operator_term(
     The number of orbitals is equal to the given order.
 
     Args:
-        order: How many unique orbitals the non-zero terms should correspond to. 
+        order: How many unique orbitals the non-zero terms should correspond to.
         real: Whether or not the coefficients should be real. Defaults to True.
         seed: The seed. If None (default), uses np.random.
     """

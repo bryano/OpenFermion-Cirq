@@ -10,11 +10,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import numpy as np
-import pytest
 import random
 
+import numpy as np
 import openfermion
+import pytest
+
 
 import openfermioncirq.testing.random  as ofctr
 
