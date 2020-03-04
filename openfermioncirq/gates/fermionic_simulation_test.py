@@ -109,7 +109,7 @@ def test_cubic_fermionic_simulation_gate_equality():
     eq.add_equality_group(
         ofc.CubicFermionicSimulationGate() ** 0.5,
         ofc.CubicFermionicSimulationGate((1,) * 3, exponent=0.5),
-        ofc.CubicFermionicSimulationGate((0.5,) * 3)
+        ofc.CubicFermionicSimulationGate((0.5,) * 3),
         )
     eq.add_equality_group(
         ofc.CubicFermionicSimulationGate((1j, 0, 0)),
@@ -117,18 +117,16 @@ def test_cubic_fermionic_simulation_gate_equality():
     eq.add_equality_group(
         ofc.CubicFermionicSimulationGate((sympy.Symbol('s'), 0, 0), exponent=2),
         ofc.CubicFermionicSimulationGate(
-            (2 * sympy.Symbol('s'), 0, 0), exponent=1)
+            (2 * sympy.Symbol('s'), 0, 0), exponent=1),
         )
     eq.add_equality_group(
         ofc.CubicFermionicSimulationGate((0, 0.7, 0), global_shift=2),
         ofc.CubicFermionicSimulationGate(
-            (0, 0.35, 0), global_shift=1, exponent=2)
+            (0, 0.35, 0), global_shift=1, exponent=2),
         )
     eq.add_equality_group(
-        ofc.CubicFermionicSimulationGate((1, 1, 1))
-    )
-    eq.add_equality_group(
-        ofc.CubicFermionicSimulationGate(((1 + 2 * np.pi), 1, 1))
+        ofc.CubicFermionicSimulationGate((1, 1, 1)),
+        ofc.CubicFermionicSimulationGate(((1 + 2 * np.pi), 1, 1)),
     )
 
 
@@ -180,12 +178,13 @@ def test_quartic_fermionic_simulation_consistency():
         ofc.QuarticFermionicSimulationGate())
 
 
-@pytest.mark.parametrize('weights', np.random.rand(10, 3))
+@pytest.mark.parametrize('weights', list(np.random.rand(10, 3)) + [(1, 0, 1)])
 def test_weights_and_exponent(weights):
     exponents = np.linspace(-1, 1, 8)
     gates = tuple(
         ofc.QuarticFermionicSimulationGate(weights / exponent,
-                                         exponent=exponent)
+                                         exponent=exponent,
+                                         absorb_exponent=True)
         for exponent in exponents)
 
     for g1 in gates:
@@ -266,12 +265,6 @@ def test_quartic_fermionic_simulation_on_simulator(
         result, correct_state, atol=atol)
 
 
-def test_quartic_fermionic_simulation_init_with_multiple_args_fails():
-    with pytest.raises(ValueError):
-        _ = ofc.QuarticFermionicSimulationGate(
-                (1,1,1), exponent=1.0, duration=np.pi/2)
-
-
 def test_quartic_fermionic_simulation_eq():
     eq = cirq.testing.EqualsTester()
 
@@ -280,18 +273,10 @@ def test_quartic_fermionic_simulation_eq():
             ofc.QuarticFermionicSimulationGate((0.3, 0.1, -0.1), exponent=2),
             ofc.QuarticFermionicSimulationGate((-0.6, -0.2, 0.2), exponent=-1),
             ofc.QuarticFermionicSimulationGate((0.6, 0.2, 2 * np.pi - 0.2)),
-            ofc.QuarticFermionicSimulationGate(
-                (1.2, 0.4, -0.4), rads=0.5 * np.pi),
-            ofc.QuarticFermionicSimulationGate((1.2, 0.4, -0.4), degs=90),
-            ofc.QuarticFermionicSimulationGate(
-                (1.2, 0.4, -0.4), duration=0.5 * np.pi / 2)
             )
 
     eq.add_equality_group(
-            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3), exponent=0.5),
-            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3),
-                                             rads=0.5 * np.pi),
-            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3), degs=90))
+            ofc.QuarticFermionicSimulationGate((-0.6, 0.0, 0.3), exponent=0.5))
 
     eq.make_equality_group(
             lambda: ofc.QuarticFermionicSimulationGate(

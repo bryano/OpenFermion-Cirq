@@ -10,13 +10,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import abc
 from typing import Optional, Tuple, Union
 
+import cirq
 import numpy as np
 import scipy.linalg as la
 import sympy
 
-import cirq
 
 
 def _arg(x):
@@ -33,7 +34,7 @@ def _canonicalize_weight(w):
     if cirq.is_parameterized(w):
         return (cirq.PeriodicValue(abs(w), 2 * sympy.pi), sympy.arg(w))
     period = 2 * np.pi
-    return (np.round((w % period) if (w == np.real(w)) else
+    return (np.round((w.real % period) if (w == np.real(w)) else
         (abs(w) % period) * w / abs(w), 8), 0)
 
 
@@ -86,11 +87,57 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float=0):
     return component
 
 
+@cirq.value_equality(approximate=True)
+class FermionicSimulationGate(cirq.EigenGate):
+    """The Jordan-Wigner transform of exp(-i H) for a fermionic Hamiltonian
+    H."""
+
+    def __init__(self,
+                 weights: Optional[Tuple[complex, ...]]=None,
+                 absorb_exponent: bool = False,
+                 **kwargs) -> None:
+        if weights is None:
+            weights = (1.,) * self.num_weights
+        self.weights = weights
+
+        super().__init__(**kwargs)
+
+        if absorb_exponent:
+            self.absorb_exponent_into_weights()
+
+    @abc.abstractproperty
+    def num_weights(self) -> int:
+        """The number of parameters (weights) in the generator."""
+
+    def _value_equality_values_(self):
+        return tuple(_canonicalize_weight(w * self.exponent)
+                for w in list(self.weights) + [self._global_shift])
+
+    def _is_parameterized_(self) -> bool:
+        return any(cirq.is_parameterized(v)
+                for V in self._value_equality_values_()
+                for v in V)
+
+    def absorb_exponent_into_weights(self):
+        period = (2 * sympy.pi) if self._is_parameterized_() else 2 * (np.pi)
+        new_weights = []
+        for weight in self.weights:
+            if not weight:
+                new_weights.append(weight)
+                continue
+            old_abs = abs(weight)
+            new_abs = (old_abs * self._exponent) % period
+            new_weights.append(weight * new_abs / old_abs)
+        self.weights = tuple(new_weights)
+        self._global_shift *= self._exponent
+        self._exponent = 1
+
+
 class QuadraticFermionicSimulationGate(
-        cirq.EigenGate,
+        FermionicSimulationGate,
         cirq.InterchangeableQubitsGate,
         cirq.TwoQubitGate):
-    """(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
+    r"""(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
 
     With weights :math:`(w_0, w_1)` and exponent :math:`t`, this gate's matrix
     is defined as
@@ -101,14 +148,14 @@ class QuadraticFermionicSimulationGate(
     where
 
     .. math::
-        H = \left(w_0 \left| 10 \\right\\rangle\left\langle 01 \\right| +
-                \\text{h.c.}\\right) -
-            w_1 \left| 11 \\right\\rangle \left\langle 11 \\right|.
+        H = \left(w_0 \left| 10 \right\rangle\left\langle 01 \right| +
+                \text{h.c.}\right) -
+            w_1 \left| 11 \right\rangle \left\langle 11 \right|.
 
     This corresponds to the Jordan-Wigner transform of
 
     .. math::
-        H = (w_0 a^{\dagger}_i a_{i+1} + \\text{h.c.}) +
+        H = (w_0 a^{\dagger}_i a_{i+1} + \text{h.c.}) +
              w_1 a_{i}^{\dagger} a_{i+1}^{\dagger} a_{i} a_{i+1},
 
     where :math:`a_i` and  :math:`a_{i+1}` are the annihilation operators for
@@ -119,14 +166,8 @@ class QuadraticFermionicSimulationGate(
         weights: The weights of the terms in the Hamiltonian.
     """
 
-    def __init__(self,
-                 weights: Tuple[float, float]=(1, 1),
-                 **kwargs) -> None:
-        self.weights = weights
-
-        super().__init__(**kwargs)
-
-    def num_qubits(self):
+    @property
+    def num_weights(self):
         return 2
 
     def _decompose_(self, qubits):
@@ -163,11 +204,10 @@ class QuadraticFermionicSimulationGate(
                 exponent_str))
 
 
-@cirq.value_equality(approximate=True)
 class CubicFermionicSimulationGate(
-        cirq.EigenGate,
+        FermionicSimulationGate,
         cirq.ThreeQubitGate):
-    """w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
+    r"""w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
     matrix is defined as
@@ -178,22 +218,22 @@ class CubicFermionicSimulationGate(
     where
 
     .. math::
-        H = \left(w_0 \left| 110 \\right\\rangle\left\langle 101 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_1 \left| 110 \\right\\rangle\left\langle 011 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_2 \left| 101 \\right\\rangle\left\langle 011 \\right| +
-                \\text{h.c.}\\right)
+        H = \left(w_0 \left| 110 \right\rangle\left\langle 101 \right| +
+                \text{h.c.}\right) +
+            \left(w_1 \left| 110 \right\rangle\left\langle 011 \right| +
+                \text{h.c.}\right) +
+            \left(w_2 \left| 101 \right\rangle\left\langle 011 \right| +
+                \text{h.c.}\right)
 
     This corresponds to the Jordan-Wigner transform of
 
     .. math::
         H = -\left(w_0 a^{\dagger}_i a^{\dagger}_{i+1} a_{i} a_{i+2} +
-                   \\text{h.c.}\\right) -
+                   \text{h.c.}\right) -
             \left(w_1 a^{\dagger}_i a^{\dagger}_{i+1} a_{i+1} a_{i+2} +
-                  \\text{h.c.}\\right) -
+                  \text{h.c.}\right) -
             \left(w_2 a^{\dagger}_i a^{\dagger}_{i+2} a_{i+1} a_{i+2} +
-                  \\text{h.c.}\\right),
+                  \text{h.c.}\right),
 
     where :math:`a_i`, :math:`a_{i+1}`, :math:`a_{i+2}` are the annihilation
     operators for the fermionic modes :math:`i`, :math:`(i+1)` :math:`(i+2)`,
@@ -203,14 +243,9 @@ class CubicFermionicSimulationGate(
         weights: The weights of the terms in the Hamiltonian.
     """
 
-    def __init__(self,
-                 weights: Tuple[complex, complex, complex]=(1., 1., 1.),
-                 **kwargs) -> None:
-
-        assert len(weights) == 3
-        self.weights = weights
-
-        super().__init__(**kwargs)
+    @property
+    def num_weights(self):
+        return 3
 
     def _eigen_components(self):
         components = [(0, np.diag([1, 1, 1, 0, 1, 0, 0, 1]))]
@@ -229,15 +264,6 @@ class CubicFermionicSimulationGate(
             components.append((exp_factor, proj))
         return components
 
-    def _value_equality_values_(self):
-        return tuple((w * self.exponent,)
-                for w in list(self.weights) + [self._global_shift])
-
-    def _is_parameterized_(self) -> bool:
-        return any(cirq.is_parameterized(v)
-                for V in self._value_equality_values_()
-                for v in V)
-
     def __repr__(self):
         return (
             'ofc.CubicFermionicSimulationGate(' +
@@ -251,9 +277,8 @@ class CubicFermionicSimulationGate(
             ')')
 
 
-@cirq.value_equality(approximate=True)
-class QuarticFermionicSimulationGate(cirq.EigenGate):
-    """Rotates Hamming-weight 2 states into their bitwise complements.
+class QuarticFermionicSimulationGate(FermionicSimulationGate):
+    r"""Rotates Hamming-weight 2 states into their bitwise complements.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
     matrix is defined as
@@ -264,22 +289,22 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
     where
 
     .. math::
-        H = \left(w_0 \left| 1001 \\right\\rangle\left\langle 0110 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_1 \left| 1010 \\right\\rangle\left\langle 0101 \\right| +
-                \\text{h.c.}\\right) +
-            \left(w_2 \left| 1100 \\right\\rangle\left\langle 0011 \\right| +
-                \\text{h.c.}\\right)
+        H = \left(w_0 \left| 1001 \right\rangle\left\langle 0110 \right| +
+                \text{h.c.}\right) +
+            \left(w_1 \left| 1010 \right\rangle\left\langle 0101 \right| +
+                \text{h.c.}\right) +
+            \left(w_2 \left| 1100 \right\rangle\left\langle 0011 \right| +
+                \text{h.c.}\right)
 
     This corresponds to the Jordan-Wigner transform of
 
     .. math::
         H = -\left(w_0 a^{\dagger}_i a^{\dagger}_{i+3} a_{i+1} a_{i+2} +
-                   \\text{h.c.}\\right) -
+                   \text{h.c.}\right) -
             \left(w_1 a^{\dagger}_i a^{\dagger}_{i+2} a_{i+1} a_{i+3} +
-                  \\text{h.c.}\\right) -
+                  \text{h.c.}\right) -
             \left(w_2 a^{\dagger}_i a^{\dagger}_{i+1} a_{i+2} a_{i+3} +
-                  \\text{h.c.}\\right),
+                  \text{h.c.}\right),
 
     where :math:`a_i`, ..., :math:`a_{i+3}` are the annihilation operators for
     the fermionic modes :math:`i`, ..., :math:`(i+3)`, respectively
@@ -290,52 +315,9 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
         weights: The weights of the terms in the Hamiltonian.
     """
 
-    def __init__(self,
-                 weights: Tuple[complex, complex, complex]=(1, 1, 1),
-                 absorb_exponent: bool=True,
-                 *,  # Forces keyword args.
-                 exponent: Optional[Union[sympy.Symbol, float]]=None,
-                 rads: Optional[float]=None,
-                 degs: Optional[float]=None,
-                 duration: Optional[float]=None
-                 ) -> None:
-        """Initialize the gate.
-
-        At most one of exponent, rads, degs, or duration may be specified.
-        If more are specified, the result is considered ambiguous and an
-        error is thrown. If no argument is given, the default value of one
-        half-turn is used.
-
-        Args:
-            weights: The weights of the terms in the Hamiltonian.
-            absorb_exponent: Whether to absorb the given exponent into the
-                weights. If true, the exponent of the returned gate is 1.
-            exponent: The exponent angle, in half-turns.
-            rads: The exponent angle, in radians.
-            degs: The exponent angle, in degrees.
-            duration: The exponent as a duration of time.
-        """
-
-        assert len(weights) == 3
-        self.weights = weights
-
-        if len([1 for e in [exponent, rads, degs, duration]
-                if e is not None]) > 1:
-            raise ValueError('Redundant exponent specification. '
-                             'Use ONE of exponent, rads, degs, or duration.')
-
-        if duration is not None:
-            exponent = 2 * duration / np.pi
-        else:
-            exponent = cirq.chosen_angle_to_half_turns(
-                half_turns=exponent,
-                rads=rads,
-                degs=degs)
-
-        super().__init__(exponent=exponent)
-
-        if absorb_exponent:
-            self.absorb_exponent_into_weights()
+    @property
+    def num_weights(self):
+        return 3
 
     def num_qubits(self):
         return 4
@@ -468,19 +450,6 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
         return cirq.CircuitDiagramInfo(wire_symbols=wire_symbols,
                                        exponent=self._diagram_exponent(args))
 
-    def absorb_exponent_into_weights(self):
-        period = (2 * sympy.pi) if self._is_parameterized_() else 2 * (np.pi)
-        new_weights = []
-        for weight in self.weights:
-            if not weight:
-                new_weights.append(weight)
-                continue
-            old_abs = abs(weight)
-            new_abs = (old_abs * self._exponent) % period
-            new_weights.append(weight * new_abs / old_abs)
-        self.weights = tuple(new_weights)
-        self._exponent = 1
-
     def _apply_unitary_(self, args: cirq.ApplyUnitaryArgs
                         ) -> Optional[np.ndarray]:
         if cirq.is_parameterized(self):
@@ -510,15 +479,6 @@ class QuarticFermionicSimulationGate(cirq.EigenGate):
                                            cm,
                                            slices=[c1, c2],
                                            out=args.available_buffer)
-
-    def _value_equality_values_(self):
-        return tuple(_canonicalize_weight(w * self.exponent)
-                for w in list(self.weights) + [self._global_shift])
-
-    def _is_parameterized_(self) -> bool:
-        return any(cirq.is_parameterized(v)
-                for V in self._value_equality_values_()
-                for v in V)
 
     def __repr__(self):
         return (
