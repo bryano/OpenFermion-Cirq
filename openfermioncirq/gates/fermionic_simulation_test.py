@@ -11,13 +11,15 @@
 #   limitations under the License.
 
 import itertools
+from typing import cast, Tuple
 
+import cirq
 import numpy as np
+import openfermion
 import pytest
 import scipy.linalg as la
 import sympy
 
-import cirq
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
         state_swap_eigen_component)
@@ -51,6 +53,60 @@ def test_state_swap_eigen_component(index_pair, n_qubits):
         expected_component[i, i] = expected_component[j, j] = 0.5
         expected_component[i, j] = expected_component[j, i] = sign * 0.5
         assert np.allclose(actual_component, expected_component)
+
+
+def random_real(size=None, mag=20):
+    return np.random.uniform(-mag, mag, size)
+
+
+def random_complex(size=None, mag=20):
+    return random_real(size, mag) + 1j * random_real(size, mag)
+
+
+def random_fermionic_simulation_gate(order):
+    exponent = random_real()
+    if order == 2:
+        weights = (random_complex(), random_real())
+        return ofc.QuadraticFermionicSimulationGate(weights, exponent=exponent)
+    weights = random_complex(3)
+    if order == 3:
+        return ofc.CubicFermionicSimulationGate(weights, exponent=exponent)
+    if order == 4:
+        return ofc.QuarticFermionicSimulationGate(weights, exponent=exponent)
+
+
+def assert_generators_consistent(gate):
+    fermion_generator = gate.fermion_generator
+    qubit_generator = gate.qubit_generator
+    transformed_fermion_generator = openfermion.jordan_wigner_sparse(
+            fermion_generator, gate.num_qubits())
+    transformed_fermion_generator = transformed_fermion_generator.toarray()
+    assert np.allclose(transformed_fermion_generator, qubit_generator)
+
+
+random_quadratic_gates = [
+        random_fermionic_simulation_gate(2) for _ in range(5)]
+manual_quadratic_gates = [ofc.QuadraticFermionicSimulationGate(weights)
+        for weights in
+        [cast(Tuple[float, float], (1, 1)), (1, 0), (0, 1), (0, 0)]]
+quadratic_gates = random_quadratic_gates + manual_quadratic_gates
+cubic_gates = ([ofc.CubicFermionicSimulationGate()] +
+    [random_fermionic_simulation_gate(3) for _ in range(5)])
+quartic_gates = ([ofc.QuarticFermionicSimulationGate()] +
+        [random_fermionic_simulation_gate(4) for _ in range(5)])
+gates = quadratic_gates + cubic_gates + quartic_gates
+
+
+@pytest.mark.parametrize('gate', gates)
+def test_fermionic_simulation_gate(gate):
+    ofc.testing.assert_implements_consistent_protocols(gate)
+
+    generator = gate.qubit_generator
+    expected_unitary = la.expm(-1j * gate.exponent * generator)
+    actual_unitary = cirq.unitary(gate)
+    assert np.allclose(expected_unitary, actual_unitary)
+
+    assert_generators_consistent(gate)
 
 
 def test_quadratic_fermionic_simulation_gate():

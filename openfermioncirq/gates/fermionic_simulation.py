@@ -11,10 +11,11 @@
 #   limitations under the License.
 
 import abc
-from typing import Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import cirq
 import numpy as np
+import openfermion
 import scipy.linalg as la
 import sympy
 
@@ -117,6 +118,26 @@ class FermionicSimulationGate(cirq.EigenGate):
     def num_weights(self) -> int:
         """The number of parameters (weights) in the generator."""
 
+    @abc.abstractproperty
+    def qubit_generator(self) -> np.ndarray:
+        """The matrix G such that the gate's unitary is exp(-i t G) with
+        exponent t."""
+
+    @abc.abstractproperty
+    def fermion_generators(self) -> Iterable[openfermion.FermionOperator]:
+        r"""The FermionOperators :math:`(G_i)_i` such that the gate's fermionic
+        generator is :math:`\sum_i w_i G_i + \text{h.c.}` where :math:`(w_i)_i`
+        are the gate's weights."""
+
+    @property
+    def fermion_generator(self) -> openfermion.FermionOperator:
+        """The FermionOperator G such that the gate's unitary is exp(-i t G)
+        with exponent t using the Jordan-Wigner transformation."""
+        half_generator = sum((w * G for w, G in
+                zip(self.weights, self.fermion_generators)),
+                openfermion.FermionOperator())
+        return half_generator + openfermion.hermitian_conjugated(half_generator)
+
     def _value_equality_values_(self):
         return tuple(_canonicalize_weight(w * self.exponent)
                 for w in list(self.weights) + [self._global_shift])
@@ -211,6 +232,25 @@ class QuadraticFermionicSimulationGate(
                 ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
                 exponent_str))
 
+    @property
+    def qubit_generator(self):
+        generator = np.zeros((4, 4), dtype=np.complex128)
+        # w0 |10><01| + h.c.
+        generator[2, 1] = self.weights[0]
+        generator[1, 2] = self.weights[0].conjugate()
+        # w1 |11><11|
+        generator[3, 3] = self.weights[1]
+        return generator
+
+    @property
+    def fermion_generators(self):
+        return (
+            openfermion.FermionOperator(
+                ((0, 1), (1, 0))),
+            openfermion.FermionOperator(
+                ((0, 1), (0, 0), (1, 1), (1, 0)), 0.5),
+        )
+
 
 class CubicFermionicSimulationGate(
         FermionicSimulationGate,
@@ -283,6 +323,28 @@ class CubicFermionicSimulationGate(
              (', global_shift=' +
                  cirq._compat.proper_repr(self._global_shift))) +
             ')')
+
+    @property
+    def qubit_generator(self):
+        generator = np.zeros((8, 8), dtype=np.complex128)
+        # w0 |110><101| + h.c.
+        generator[6, 5] = self.weights[0]
+        generator[5, 6] = self.weights[0].conjugate()
+        # w1 |110><011| + h.c.
+        generator[6, 3] = self.weights[1]
+        generator[3, 6] = self.weights[1].conjugate()
+        # w2 |101><011| + h.c.
+        generator[5, 3] = self.weights[2]
+        generator[3, 5] = self.weights[2].conjugate()
+        return generator
+
+    @property
+    def fermion_generators(self):
+        return (
+            openfermion.FermionOperator(((0, 1), (0, 0), (1, 1), (2, 0))),
+            openfermion.FermionOperator(((0, 1), (1, 1), (1, 0), (2, 0)), -1),
+            openfermion.FermionOperator(((0, 1), (1, 0), (2, 1), (2, 0))),
+        )
 
 
 class QuarticFermionicSimulationGate(FermionicSimulationGate):
@@ -495,3 +557,30 @@ class QuarticFermionicSimulationGate(FermionicSimulationGate):
             'exponent={})'.format(
                 ', '.join(cirq._compat.proper_repr(v) for v in self.weights),
                 cirq._compat.proper_repr(self.exponent)))
+
+    @property
+    def qubit_generator(self):
+        """The (Hermitian) matrix G such that the gate's unitary is
+        exp(-i * G).
+        """
+
+        generator = np.zeros((1 << 4,) * 2, dtype=np.complex128)
+
+        # w0 |1001><0110| + h.c.
+        generator[9, 6] = self.weights[0]
+        generator[6, 9] = self.weights[0].conjugate()
+        # w1 |1010><0101| + h.c.
+        generator[10, 5] = self.weights[1]
+        generator[5, 10] = self.weights[1].conjugate()
+        # w2 |1100><0011| + h.c.
+        generator[12, 3] = self.weights[2]
+        generator[3, 12] = self.weights[2].conjugate()
+        return generator
+
+    @property
+    def fermion_generators(self):
+        return (
+            openfermion.FermionOperator(((0, 1), (1, 0), (2, 0), (3, 1)), -1),
+            openfermion.FermionOperator(((0, 1), (1, 0), (2, 1), (3, 0))),
+            openfermion.FermionOperator(((0, 1), (1, 1), (2, 0), (3, 0)), -1),
+        )
