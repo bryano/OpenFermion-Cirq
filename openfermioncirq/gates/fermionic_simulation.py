@@ -96,6 +96,14 @@ class FermionicSimulationGate(cirq.EigenGate):
                  weights: Optional[Tuple[complex, ...]]=None,
                  absorb_exponent: bool = False,
                  **kwargs) -> None:
+        """A fermionic interaction.
+
+        Args:
+            weights: The weights of the terms in the Hamiltonian.
+            absorb_exponent: Whether to absorb the given exponent into the
+                weights. If true, the exponent of the return gate is `1`.
+                Defaults to `False`.
+        """
         if weights is None:
             weights = (1.,) * self.num_weights
         self.weights = weights

@@ -34,6 +34,7 @@ from openfermioncirq.gates.three_qubit_gates import (
     rot111)
 
 from openfermioncirq.gates.fermionic_simulation import (
+    FermionicSimulationGate,
     QuadraticFermionicSimulationGate,
     CubicFermionicSimulationGate,
     QuarticFermionicSimulationGate)

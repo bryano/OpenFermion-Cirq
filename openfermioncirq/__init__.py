@@ -30,6 +30,7 @@ from openfermioncirq.gates import (
     XXYYPowGate,
     YXXY,
     YXXYPowGate,
+    FermionicSimulationGate,
     QuadraticFermionicSimulationGate,
     CubicFermionicSimulationGate,
     QuarticFermionicSimulationGate
