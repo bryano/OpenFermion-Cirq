@@ -90,8 +90,22 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float=0):
 
 @cirq.value_equality(approximate=True)
 class FermionicSimulationGate(cirq.EigenGate):
-    """The Jordan-Wigner transform of exp(-i H) for a fermionic Hamiltonian
-    H."""
+    r"""The Jordan-Wigner transform of :math:`\exp(-i H)` for a fermionic Hamiltonian
+    :math:`H`.
+
+    Each subclass corresponds to a set of generators :math:`\{G_i\}`
+    corresponding to the family of Hamiltonians :math:`\sum_i w_i G_i +
+    \text{h.c.}`, where the weights :math:`w_i \in \mathbb C` are specified by
+    the instance.
+
+    The Jordan-Wigner mapping maps the fermionic modes :math:`(0, \ldots, n - 1)` to qubits 
+    :math:`(0, \ldots, n - 1)`, respectively.
+
+    Each generator :math:`G_i` must be a linear combination of fermionic
+    monomials consisting of an even number of creation/annihilation operators.
+    This is so that the Jordan-Wigner transform acts only on the gate's qubits,
+    even when the fermionic modes are offset as part of a larger Jordan-Wigner string.
+    """
 
     def __init__(self,
                  weights: Optional[Tuple[complex, ...]]=None,
