@@ -360,7 +360,6 @@ class CubicFermionicSimulationGate(
             openfermion.FermionOperator(((0, 1), (1, 0), (2, 1), (2, 0))),
         )
 
-
 class QuarticFermionicSimulationGate(FermionicSimulationGate):
     r"""Rotates Hamming-weight 2 states into their bitwise complements.
 
