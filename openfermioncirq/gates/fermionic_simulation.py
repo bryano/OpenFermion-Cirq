@@ -317,7 +317,7 @@ class CubicFermionicSimulationGate(FermionicSimulationGate, cirq.ThreeQubitGate,
         for ij, w in zip([(1, 2), (0, 2), (0, 1)], self.weights):
             nontrivial_part[ij] = w
             nontrivial_part[ij[::-1]] = w.conjugate()
-        assert (np.allclose(nontrivial_part, nontrivial_part.conj().T))
+        assert np.allclose(nontrivial_part, nontrivial_part.conj().T)
         eig_vals, eig_vecs = np.linalg.eigh(nontrivial_part)
         for eig_val, eig_vec in zip(eig_vals, eig_vecs.T):
             exp_factor = -eig_val / np.pi
