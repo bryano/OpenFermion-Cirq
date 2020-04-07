@@ -15,7 +15,6 @@ from typing import cast, Tuple
 
 import cirq
 import numpy as np
-import openfermion
 import pytest
 import scipy.linalg as la
 import sympy
@@ -76,12 +75,10 @@ def random_fermionic_simulation_gate(order):
 
 
 def assert_generators_consistent(gate):
-    fermion_generator = gate.fermion_generator
-    qubit_generator = gate.qubit_generator
-    transformed_fermion_generator = openfermion.jordan_wigner_sparse(
-            fermion_generator, gate.num_qubits())
-    transformed_fermion_generator = transformed_fermion_generator.toarray()
-    assert np.allclose(transformed_fermion_generator, qubit_generator)
+    qubit_generator = gate.qubit_generator_matrix
+    qubit_generator_from_fermion_generator = (
+            super(type(gate), gate).qubit_generator_matrix)
+    assert np.allclose(qubit_generator, qubit_generator_from_fermion_generator)
 
 
 random_quadratic_gates = [
@@ -101,7 +98,7 @@ gates = quadratic_gates + cubic_gates + quartic_gates
 def test_fermionic_simulation_gate(gate):
     ofc.testing.assert_implements_consistent_protocols(gate)
 
-    generator = gate.qubit_generator
+    generator = gate.qubit_generator_matrix
     expected_unitary = la.expm(-1j * gate.exponent * generator)
     actual_unitary = cirq.unitary(gate)
     assert np.allclose(expected_unitary, actual_unitary)
