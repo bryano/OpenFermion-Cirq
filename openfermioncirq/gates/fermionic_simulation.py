@@ -270,10 +270,8 @@ class QuadraticFermionicSimulationGate(ParityPreservingFermionicGate,
         )
 
 
-class CubicFermionicSimulationGate(
-        ParityPreservingFermionicGate,
-        cirq.ThreeQubitGate,
-        cirq.EigenGate):
+class CubicFermionicSimulationGate(ParityPreservingFermionicGate,
+                                   cirq.ThreeQubitGate, cirq.EigenGate):
     r"""w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
@@ -363,9 +361,8 @@ class CubicFermionicSimulationGate(
         )
 
 
-class QuarticFermionicSimulationGate(
-        ParityPreservingFermionicGate,
-        cirq.EigenGate):
+class QuarticFermionicSimulationGate(ParityPreservingFermionicGate,
+                                     cirq.EigenGate):
     r"""Rotates Hamming-weight 2 states into their bitwise complements.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
