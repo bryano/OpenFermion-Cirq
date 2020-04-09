@@ -40,7 +40,7 @@ Fermionic Simulation Gates
 .. autosummary::
     :toctree: generated/
 
-    FermionicSimulationGate
+    ParityPreservingFermionicGate
     QuadraticFermionicSimulationGate
     CubicFermionicSimulationGate
     QuarticFermionicSimulationGate

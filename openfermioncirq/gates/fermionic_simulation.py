@@ -88,7 +88,7 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float = 0):
 
 
 @cirq.value_equality(approximate=True)
-class FermionicSimulationGate(cirq.Gate, metaclass=abc.ABCMeta):
+class ParityPreservingFermionicGate(cirq.Gate, metaclass=abc.ABCMeta):
     r"""The Jordan-Wigner transform of :math:`\exp(-i H)` for a fermionic
     Hamiltonian :math:`H`.
 
@@ -187,7 +187,7 @@ class FermionicSimulationGate(cirq.Gate, metaclass=abc.ABCMeta):
         self._exponent = 1
 
 
-class QuadraticFermionicSimulationGate(FermionicSimulationGate,
+class QuadraticFermionicSimulationGate(ParityPreservingFermionicGate,
                                        cirq.InterchangeableQubitsGate,
                                        cirq.TwoQubitGate, cirq.EigenGate):
     r"""(w0 |10><01| + h.c.) + w1 * |11><11| interaction.
@@ -269,8 +269,10 @@ class QuadraticFermionicSimulationGate(FermionicSimulationGate,
         )
 
 
-class CubicFermionicSimulationGate(FermionicSimulationGate, cirq.ThreeQubitGate,
-                                   cirq.EigenGate):
+class CubicFermionicSimulationGate(
+        ParityPreservingFermionicGate,
+        cirq.ThreeQubitGate,
+        cirq.EigenGate):
     r"""w0 * |110><101| + w1 * |110><011| + w2 * |101><011| + hc interaction.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
@@ -360,7 +362,9 @@ class CubicFermionicSimulationGate(FermionicSimulationGate, cirq.ThreeQubitGate,
         )
 
 
-class QuarticFermionicSimulationGate(FermionicSimulationGate, cirq.EigenGate):
+class QuarticFermionicSimulationGate(
+        ParityPreservingFermionicGate,
+        cirq.EigenGate):
     r"""Rotates Hamming-weight 2 states into their bitwise complements.
 
     With weights :math:`(w_0, w_1, w_2)` and exponent :math:`t`, this gate's
