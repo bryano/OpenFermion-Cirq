@@ -11,7 +11,7 @@
 #   limitations under the License.
 
 import abc
-from typing import Iterable, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import cirq
 import numpy as np
@@ -134,8 +134,16 @@ class ParityPreservingFermionicGate(cirq.Gate, metaclass=abc.ABCMeta):
             self.absorb_exponent_into_weights()
 
     @abc.abstractproperty
+    def fermion_generator_components(self
+                                    ) -> Tuple[openfermion.FermionOperator]:
+        r"""The FermionOperators :math:`(G_i)_i` such that the gate's fermionic
+        generator is :math:`\sum_i w_i G_i + \text{h.c.}` where :math:`(w_i)_i`
+        are the gate's weights."""
+
+    @property
     def num_weights(self) -> int:
         """The number of parameters (weights) in the generator."""
+        return len(self.fermion_generator_components)
 
     @property
     def qubit_generator_matrix(self) -> np.ndarray:
@@ -143,13 +151,6 @@ class ParityPreservingFermionicGate(cirq.Gate, metaclass=abc.ABCMeta):
         exponent t."""
         return openfermion.jordan_wigner_sparse(self.fermion_generator,
                                                 self.num_qubits()).toarray()
-
-    @abc.abstractproperty
-    def fermion_generator_components(self
-                                    ) -> Iterable[openfermion.FermionOperator]:
-        r"""The FermionOperators :math:`(G_i)_i` such that the gate's fermionic
-        generator is :math:`\sum_i w_i G_i + \text{h.c.}` where :math:`(w_i)_i`
-        are the gate's weights."""
 
     @property
     def fermion_generator(self) -> openfermion.FermionOperator:

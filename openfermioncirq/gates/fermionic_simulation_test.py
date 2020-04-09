@@ -105,6 +105,8 @@ def test_fermionic_simulation_gate(gate):
 
     assert_generators_consistent(gate)
 
+    assert gate.num_weights == super(type(gate), gate).num_weights
+
 
 def test_quadratic_fermionic_simulation_gate():
     ofc.testing.assert_implements_consistent_protocols(
