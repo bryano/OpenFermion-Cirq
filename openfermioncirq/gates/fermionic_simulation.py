@@ -142,8 +142,8 @@ class ParityPreservingFermionicGate(cirq.Gate, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def fswap(self, i: int):
-        """Updates the weights of the gate as if it were sandwiched by an FSWAP
-        on the i-th and (i+1)th qubits."""
+        """Update the weights of the gate to effect conjugation by an FSWAP on
+        the i-th and (i+1)th qubits."""
 
     @property
     def num_weights(self) -> int:
