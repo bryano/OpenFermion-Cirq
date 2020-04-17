@@ -73,9 +73,7 @@ def test_interaction_operator_interconversion(n_modes, seed):
 def test_interaction_operator_from_bad_gates():
     for gates in [{(): 'bad'}, {(0,): cirq.X}]:
         with pytest.raises(TypeError):
-            other_operator = (
-                ofc.interaction_operator_from_fermionic_simulation_gates(
-                    5, gates))
+            ofc.interaction_operator_from_fermionic_simulation_gates(5, gates)
 
 
 def random_real(size=None, mag=20):
