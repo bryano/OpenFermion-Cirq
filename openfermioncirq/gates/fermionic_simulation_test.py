@@ -23,8 +23,8 @@ import sympy
 
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
-    state_swap_eigen_component,
     interaction_operator_from_fermionic_simulation_gates,
+    state_swap_eigen_component,
 )
 
 
