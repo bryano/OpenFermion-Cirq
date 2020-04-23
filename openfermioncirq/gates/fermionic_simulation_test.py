@@ -149,7 +149,7 @@ def assert_permute_consistent(gate):
 
 
 def assert_interaction_operator_consistent(gate):
-    interaction_op = gate.to_interaction_operator()
+    interaction_op = gate.interaction_operator_generator()
     other_gate = gate.from_interaction_operator(operator=interaction_op)
     if other_gate is None:
         assert np.allclose(gate.weights, 0)
@@ -159,11 +159,12 @@ def assert_interaction_operator_consistent(gate):
     other_interaction_op = openfermion.InteractionOperator.zero(
         interaction_op.n_qubits)
     super(type(gate),
-          gate).to_interaction_operator(operator=other_interaction_op)
+          gate).interaction_operator_generator(operator=other_interaction_op)
     other_interaction_op = openfermion.normal_ordered(interaction_op)
     assert interaction_op == other_interaction_op
 
-    other_interaction_op = super(type(gate), gate).to_interaction_operator()
+    other_interaction_op = super(type(gate),
+                                 gate).interaction_operator_generator()
     other_interaction_op = openfermion.normal_ordered(interaction_op)
     assert interaction_op == other_interaction_op
 

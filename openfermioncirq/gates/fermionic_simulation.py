@@ -143,7 +143,8 @@ def interaction_operator_from_fermionic_simulation_gates(
             operator.constant += gate._exponent * gate._global_shift * np.pi
             operator.one_body_tensor[indices * 2] += coeff
         elif isinstance(gate, InteractionOperatorFermionicGate):
-            gate.to_interaction_operator(operator=operator, modes=indices)
+            gate.interaction_operator_generator(operator=operator,
+                                                modes=indices)
         else:
             raise TypeError(f'Gate type {gate} not supported.')
 
@@ -307,7 +308,7 @@ class InteractionOperatorFermionicGate(ParityPreservingFermionicGate):
         """Constructs the gate corresponding to the specified term in the
         Hamiltonian."""
 
-    def to_interaction_operator(
+    def interaction_operator_generator(
             self,
             *,
             operator: Optional[openfermion.InteractionOperator] = None,
@@ -429,7 +430,7 @@ class QuadraticFermionicSimulationGate(InteractionOperatorFermionicGate,
             return cls(weights)
         return None
 
-    def to_interaction_operator(
+    def interaction_operator_generator(
             self,
             *,
             operator: Optional[openfermion.InteractionOperator] = None,
@@ -565,7 +566,7 @@ class CubicFermionicSimulationGate(InteractionOperatorFermionicGate,
             return cls(cast(Tuple[complex, complex, complex], weights))
         return None
 
-    def to_interaction_operator(
+    def interaction_operator_generator(
             self,
             *,
             operator: Optional[openfermion.InteractionOperator] = None,
@@ -858,7 +859,7 @@ class QuarticFermionicSimulationGate(InteractionOperatorFermionicGate,
             return cls(cast(Tuple[complex, complex, complex], weights))
         return None
 
-    def to_interaction_operator(
+    def interaction_operator_generator(
             self,
             operator: Optional[openfermion.InteractionOperator] = None,
             modes: Optional[Sequence[int]] = None
