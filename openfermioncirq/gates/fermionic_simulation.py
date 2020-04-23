@@ -135,10 +135,13 @@ def interaction_operator_from_fermionic_simulation_gates(
     """The interaction operator that is the sum of the generators of the
     specified fermionic simulation gates.
 
-    The gates are specified as a dictionary whose items are (indices, gate), where
-        * indices is a tuple of ints specifying the modes on which the gate acts;
+    The gates are specified as a dictionary whose items are (indices, gate),
+    where
+        * indices is a tuple of ints specifying the modes on which the gate
+          acts;
         * gate is one of type
-          - float, which is interpreted as a constant, regardless of the indices,
+          - float, which is interpreted as a constant, regardless of the
+            indices,
           - cirq.ZPowGate, which is interpreted as a "linear" fermionic
             simulation gate,
           - openfermioncirq.InteractionOperatorFermionicGate.
