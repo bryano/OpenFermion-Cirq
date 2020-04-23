@@ -197,9 +197,9 @@ class ParityPreservingFermionicGate(cirq.Gate, metaclass=abc.ABCMeta):
         if absorb_exponent:
             self.absorb_exponent_into_weights()
 
-    @classmethod
+    @staticmethod
     @abc.abstractmethod
-    def fermion_generator_components(cls) -> Tuple[openfermion.FermionOperator]:
+    def fermion_generator_components() -> Tuple[openfermion.FermionOperator]:
         r"""The FermionOperators :math:`(G_i)_i` such that the gate's fermionic
         generator is :math:`\sum_i w_i G_i + \text{h.c.}` where :math:`(w_i)_i`
         are the gate's weights."""
@@ -401,8 +401,8 @@ class QuadraticFermionicSimulationGate(InteractionOperatorFermionicGate,
         generator[3, 3] = self.weights[1]
         return generator
 
-    @classmethod
-    def fermion_generator_components(cls):
+    @staticmethod
+    def fermion_generator_components():
         return (
             openfermion.FermionOperator(((0, 1), (1, 0))),
             openfermion.FermionOperator(((0, 1), (0, 0), (1, 1), (1, 0)), 0.5),
@@ -537,8 +537,8 @@ class CubicFermionicSimulationGate(InteractionOperatorFermionicGate,
         generator[3, 5] = self.weights[2].conjugate()
         return generator
 
-    @classmethod
-    def fermion_generator_components(cls):
+    @staticmethod
+    def fermion_generator_components():
         return (
             openfermion.FermionOperator(((0, 1), (0, 0), (1, 1), (2, 0))),
             openfermion.FermionOperator(((0, 1), (1, 1), (1, 0), (2, 0)), -1),
@@ -831,8 +831,8 @@ class QuarticFermionicSimulationGate(InteractionOperatorFermionicGate,
         generator[3, 12] = self.weights[2].conjugate()
         return generator
 
-    @classmethod
-    def fermion_generator_components(cls):
+    @staticmethod
+    def fermion_generator_components():
         return (
             openfermion.FermionOperator(((0, 1), (1, 0), (2, 0), (3, 1)), -1),
             openfermion.FermionOperator(((0, 1), (1, 0), (2, 1), (3, 0))),
