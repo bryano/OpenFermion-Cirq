@@ -131,7 +131,7 @@ def fermionic_simulation_gates_from_interaction_operator(
     return gates
 
 
-def interaction_operator_from_fermionic_simulation_gates(
+def sum_of_interaction_operator_gate_generators(
         n_modes: int,
         gates: Dict[Tuple[int, ...], Union[float, cirq.Gate]],
 ) -> openfermion.InteractionOperator:

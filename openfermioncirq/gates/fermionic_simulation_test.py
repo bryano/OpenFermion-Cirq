@@ -23,7 +23,7 @@ import sympy
 
 import openfermioncirq as ofc
 from openfermioncirq.gates.fermionic_simulation import (
-    interaction_operator_from_fermionic_simulation_gates,
+    sum_of_interaction_operator_gate_generators,
     state_swap_eigen_component,
 )
 
@@ -65,7 +65,7 @@ def test_interaction_operator_interconversion(n_modes, seed):
                                                        real=False,
                                                        seed=seed)
     gates = ofc.fermionic_simulation_gates_from_interaction_operator(operator)
-    other_operator = interaction_operator_from_fermionic_simulation_gates(
+    other_operator = sum_of_interaction_operator_gate_generators(
         n_modes, gates)
     operator = openfermion.normal_ordered(operator)
     other_operator = openfermion.normal_ordered(other_operator)
@@ -75,7 +75,7 @@ def test_interaction_operator_interconversion(n_modes, seed):
 def test_interaction_operator_from_bad_gates():
     for gates in [{(): 'bad'}, {(0,): cirq.X}]:
         with pytest.raises(TypeError):
-            interaction_operator_from_fermionic_simulation_gates(5, gates)
+            sum_of_interaction_operator_gate_generators(5, gates)
 
 
 def random_real(size=None, mag=20):
