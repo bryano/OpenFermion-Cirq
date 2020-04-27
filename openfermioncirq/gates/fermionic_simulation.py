@@ -91,8 +91,11 @@ def state_swap_eigen_component(x: str, y: str, sign: int = 1, angle: float = 0):
 def fermionic_simulation_gates_from_interaction_operator(
         operator: openfermion.InteractionOperator):
     r"""
-    Given $H = \sum_a H_a$, returns gates
-    $\left\{G_a\right\} = \left\{e^{i H_a\right\}$.
+    Given $H = \sum_{I \subset [n]} H_I$, returns gates
+    $\left\{G_I\right\} = \left\{e^{i H_I\right\}$.
+
+    Each term $H_I$ is the sum of all terms in $H$ that involve exactly the
+    orbitals $I$.
 
     Args:
         operator: The interaction operator ($H$).
