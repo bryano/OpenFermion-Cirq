@@ -65,8 +65,7 @@ def test_interaction_operator_interconversion(n_modes, seed):
                                                        real=False,
                                                        seed=seed)
     gates = ofc.fermionic_simulation_gates_from_interaction_operator(operator)
-    other_operator = sum_of_interaction_operator_gate_generators(
-        n_modes, gates)
+    other_operator = sum_of_interaction_operator_gate_generators(n_modes, gates)
     operator = openfermion.normal_ordered(operator)
     other_operator = openfermion.normal_ordered(other_operator)
     assert operator == other_operator
